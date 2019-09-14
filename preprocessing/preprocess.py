@@ -24,6 +24,7 @@ def frange(start, stop, jump, end=False, via_str=False):
 
 
 META_PATH = "./maestro-v2.0.0/maestro-v2.0.0.csv"
+NP_META_PATH = "./np_out/META.csv"
 DATA_DIR = "maestro-v2.0.0/"
 
 MIN_MIDI = 21
@@ -41,10 +42,11 @@ cwd = os.getcwd().replace('\\', '/')
 
 notes = []
 
+meta_f = open(NP_META_PATH, 'w')
 display_count = 0
 for f in midi_list:
     display_count += 1
-    print('\nProcessing ' + f + '. ' + str(display_count)  + '/' + str(len(midi_list)))
+    print('\nProcessing ' + f + ' ' + str(display_count)  + '/' + str(len(midi_list)))
     
     print('Parsing file.. ', end='')
     stream = converter.parse(f)
@@ -60,17 +62,8 @@ for f in midi_list:
     note_dict = {}
 
     print('Ordering..')
-    for element in tqdm(elements):
+    for save_id, element in tqdm(enumerate(elements)):
         current_time = round_down(float(Fraction(element.offset)), DUR_PRECISION)
-        #if not element.offset == current_time:
-        #    if element.offset < current_time:
-        #        print("Offset in the past, ending..")
-        #        exit()
-
-            #note_stream.append((current_time, current_notes))
-
-            #current_notes = []
-            #current_time = float(Fraction(element.offset))
 
         if isinstance(element, note.Note):
             #current_notes.append(element)
@@ -99,15 +92,8 @@ for f in midi_list:
             raise
 
         i += 1
-        
-    #nb_samples = vector_seq.shape[0] - SEQ_LEN
-    #training_input = np.zeros((nb_samples, SEQ_LEN, INPUT_SIZE))
-    #training_output = np.zeros((nb_samples, INPUT_SIZE))
 
-    #for i in range(nb_samples):
-    #    training_input[i, :, :] = vector_seq[i:i+SEQ_LEN, :].reshape((1,SEQ_LEN, INPUT_SIZE))
-    #    training_output[i, :] = vector_seq[i+SEQ_LEN, :]
+    np.save("./np_out/{0}.npy".format(save_id), vector_seq)
+    meta_f.write("preprocessing/np_out/{0}.npy, {1}\n".format(save_id, vector_seq.shape[0]))
 
-    #print(training_input.shape)
-    #print(training_output.shape)
-    #note_stream.sort()
+meta_f.close()

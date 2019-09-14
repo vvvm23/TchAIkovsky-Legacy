@@ -1,5 +1,6 @@
 import numpy as np
 import keras
+import pandas as pd
 
 class DataGenerator(keras.utils.Sequence):
     def __init__(self, dim, meta_file, batch_size=32, seq_size=100, shuffle=True):
@@ -11,7 +12,14 @@ class DataGenerator(keras.utils.Sequence):
         self.on_epoch_end()
 
     def __ID_list_generation(self, meta_file):
-        return 0
+        df = pd.read_csv(meta_file, header=None, usecols=[0,1])
+        fl_pairs = list(zip(df[0].tolist(), df[1].tolist()))
+        _ID_list = []
+
+        for pair in fl_pairs:
+            _ID_list = _ID_list + [(pair[0], i) for i in range(pair[1] - self.seq_size + 1)]
+
+        return _ID_list
 
     def __len__(self):
         return int(np.floor(len(self.ID_list) / self.batch_size))
@@ -37,14 +45,13 @@ class DataGenerator(keras.utils.Sequence):
         X = np.empty((self.batch_size, self.seq_size, self.dim))
         Y = np.empty((self.batch_size, self.dim))
 
-        
         for i, ID in enumerate(_ID_list):
             file_name = ID[0]
             start = ID[1]
             
-            midi_vectors = np.load(file_name) # TODO: Is it possible to only load X many lines from file?
-            X[i, :] = midi_vectors[start:start+self.seq_size]
-            Y[i, :] = midi_vectors[start+self.seq_size]
+            midi_vectors = np.load(file_name, mmap_mode='r') 
+            X[i, :] = midi_vectors[start:start+self.seq_size, :]
+            Y[i, :] = midi_vectors[start+self.seq_size, :]
 
         return X, Y
 
