@@ -8,6 +8,7 @@ import numpy as np
 def round_down(num, factor):
     return num - (num % factor)
 
+# TODO: Replace with np.linspace
 def frange(start, stop, jump, end=False, via_str=False):
     if via_str:
         start = str(start)
@@ -22,7 +23,7 @@ def frange(start, stop, jump, end=False, via_str=False):
     if end and start == stop:
         yield(float(start))
 
-
+# TODO: Properly parameterise this
 META_PATH = "./maestro-v2.0.0/maestro-v2.0.0.csv"
 NP_META_PATH = "./np_out/META.csv"
 DATA_DIR = "maestro-v2.0.0/"
@@ -38,10 +39,6 @@ DUR_NORM = 4.0
 df = pd.read_csv(META_PATH)
 midi_list = [DATA_DIR + x for x in list(df.loc[:, 'midi_filename'])]
 
-cwd = os.getcwd().replace('\\', '/')
-
-notes = []
-
 meta_f = open(NP_META_PATH, 'w')
 display_count = 0
 for f in midi_list:
@@ -56,23 +53,19 @@ for f in midi_list:
     elements = stream.flat.notes
     print('Done.')
 
-    #current_time = 0
-    #current_notes = []
-    #note_stream = []
     note_dict = {}
 
     print('Ordering..')
-    for save_id, element in tqdm(enumerate(elements)):
-        current_time = round_down(float(Fraction(element.offset)), DUR_PRECISION)
+    for save_id, element in tqdm(enumerate(elements)): # This enumerate function is pretty good, use to improve older projects
+        current_time = round_down(float(Fraction(element.offset)), DUR_PRECISION) # Lose some precision in time
 
+        # Add to timestamp if exists, else create a new timestamp
         if isinstance(element, note.Note):
-            #current_notes.append(element)
             try:
                 note_dict[current_time].append(element)
             except KeyError as e:
                 note_dict[current_time] = [element]
         elif isinstance(element, chord.Chord):
-            #current_notes = current_notes + list(element.notes)
             try:
                 note_dict[current_time] = note_dict[current_time] + [n for n in element.notes]
             except KeyError as e:
@@ -81,6 +74,7 @@ for f in midi_list:
     vector_seq = np.zeros((int(max(note_dict) / DUR_PRECISION) + 1, INPUT_SIZE))
     i = 0
 
+    # Iterate through timestamps based on DUR_PRECISION and vectorise
     for t in frange(0.0, max(note_dict), DUR_PRECISION):
         try:
             for n in note_dict[t]:
@@ -93,6 +87,7 @@ for f in midi_list:
 
         i += 1
 
+    # Save to file and update metafile
     np.save("./np_out/{0}.npy".format(save_id), vector_seq)
     meta_f.write("preprocessing/np_out/{0}.npy, {1}\n".format(save_id, vector_seq.shape[0]))
 
