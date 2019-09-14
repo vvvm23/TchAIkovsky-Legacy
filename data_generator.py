@@ -3,15 +3,15 @@ import keras
 import pandas as pd
 
 class DataGenerator(keras.utils.Sequence):
-    def __init__(self, dim, meta_file, batch_size=32, seq_size=100, shuffle=True):
+    def __init__(self, dim, ID_list, batch_size=32, seq_size=100, shuffle=True):
         self.dim = dim
         self.batch_size = batch_size
         self.shuffle = shuffle
         self.seq_size = seq_size
-        self.ID_list = self.__ID_list_generation(meta_file)
+        self.ID_list = ID_list
         self.on_epoch_end()
 
-    def __ID_list_generation(self, meta_file):
+    '''def __ID_list_generation(self, meta_file):
         df = pd.read_csv(meta_file, header=None, usecols=[0,1])
         fl_pairs = list(zip(df[0].tolist(), df[1].tolist()))
         _ID_list = []
@@ -19,7 +19,7 @@ class DataGenerator(keras.utils.Sequence):
         for pair in fl_pairs:
             _ID_list = _ID_list + [(pair[0], i) for i in range(pair[1] - self.seq_size + 1)]
 
-        return _ID_list
+        return _ID_list'''
 
     def __len__(self):
         return int(np.floor(len(self.ID_list) / self.batch_size))
