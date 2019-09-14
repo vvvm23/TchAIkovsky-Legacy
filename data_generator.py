@@ -25,23 +25,17 @@ class DataGenerator(keras.utils.Sequence):
         return int(np.floor(len(self.ID_list) / self.batch_size))
 
     def __getitem__(self, index):
-        pass
+        _indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
+        _ID_list = [self.ID_list[i] for i in _indexes]
+        X, Y = self.__data_generation(_ID_list)
+        return X, Y
 
     def on_epoch_end(self):
-        pass
+        self.indexes = np.arange(len(self.ID_list))
+        if self.shuffle:
+            np.random.shuffle(self.indexes)
 
     def __data_generation(self, _ID_list):
-        ''' 
-            We need a metadata file containing name of npy fiile and it's length.
-            Then, we can generate a list of IDs of tuples (file_name, sequence_start)
-            for each possible start location, based on it's length and seq_size.
-
-            Then, we can switch training multiple different files in order to avoid overfitting
-            and we can make use of entire dataset.
-
-            Let us proceed under the assumption that self.ID_list contains all such IDs, and
-            _ID_list is a local copy of the currently selected IDs.
-        '''
         X = np.empty((self.batch_size, self.seq_size, self.dim))
         Y = np.empty((self.batch_size, self.dim))
 
