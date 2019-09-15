@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 from tqdm import tqdm
-from music21 import converter, note, chord
+from music21 import converter, note, chord, midi
 from fractions import Fraction
 import numpy as np
 
@@ -41,22 +41,22 @@ midi_list = [DATA_DIR + x for x in list(df.loc[:, 'midi_filename'])]
 
 meta_f = open(NP_META_PATH, 'w')
 display_count = 0
-for f in midi_list:
+for save_id, f in tqdm(enumerate(midi_list)):
     display_count += 1
-    print('\nProcessing ' + f + ' ' + str(display_count)  + '/' + str(len(midi_list)))
+    #print('\nProcessing ' + f + ' ' + str(display_count)  + '/' + str(len(midi_list)))
     
-    print('Parsing file.. ', end='')
-    stream = converter.parse(f)
-    print('Done.')
+    #print('Parsing file.. ', end='')
+    stream = converter.parseFile(f, format='midi')
+    #print('Done.')
 
-    print('Flattening.. ', end='')
+    #print('Flattening.. ', end='')
     elements = stream.flat.notes
-    print('Done.')
+    #print('Done.')
 
     note_dict = {}
 
-    print('Ordering..')
-    for save_id, element in tqdm(enumerate(elements)): # This enumerate function is pretty good, use to improve older projects
+    #print('Ordering..')
+    for element in elements: # This enumerate function is pretty good, use to improve older projects
         current_time = round_down(float(Fraction(element.offset)), DUR_PRECISION) # Lose some precision in time
 
         # Add to timestamp if exists, else create a new timestamp

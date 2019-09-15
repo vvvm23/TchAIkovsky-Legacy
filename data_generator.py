@@ -1,6 +1,5 @@
 import numpy as np
 import keras
-import pandas as pd
 
 # Data Generator for handling our converted MIDI files
 class DataGenerator(keras.utils.Sequence):
@@ -13,11 +12,17 @@ class DataGenerator(keras.utils.Sequence):
         self.on_epoch_end()
 
     def __len__(self):
-        return int(np.floor(len(self.ID_list) / self.batch_size))
+        return int(np.floor(len(self.ID_list) / float(self.batch_size)))
 
     # Get one batch of data
     def __getitem__(self, index):
-        _indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
+        
+        if len(self.ID_list) - index*self.batch_size < self.batch_size:
+            _indexes = self.indexes[index*self.batch_size:]
+        else:
+            _indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
+        
+        #_indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
         _ID_list = [self.ID_list[i] for i in _indexes]
         X, Y = self.__data_generation(_ID_list)
         return X, Y
@@ -30,16 +35,22 @@ class DataGenerator(keras.utils.Sequence):
 
     # Load the data from file and memory map it
     def __data_generation(self, _ID_list):
-        X = np.empty((self.batch_size, self.seq_size, self.dim))
-        Y = np.empty((self.batch_size, self.dim))
+        X = np.zeros((len(_ID_list), self.seq_size, self.dim))
+        Y = np.zeros((len(_ID_list), self.dim))
 
         for i, ID in enumerate(_ID_list):
             file_name = ID[0]
             start = ID[1]
             
-            # Is it better to load entire fire or mmap?
-            midi_vectors = np.load(file_name, mmap_mode='r') 
-            X[i, :] = midi_vectors[start:start+self.seq_size, :]
+            # Is it better to load entire file or mmap?
+            #midi_vectors = np.load(file_name, mmap_mode='r') 
+            midi_vectors = np.load(file_name)
+            #print(midi_vectors.shape, start, file_name)
+            try:
+                X[i, :, :] = midi_vectors[start:start+self.seq_size, :]
+            except:
+                print(X.shape, midi_vectors.shape, ID)
+                exit()
             Y[i, :] = midi_vectors[start+self.seq_size, :]
 
         return X, Y

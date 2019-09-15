@@ -3,3 +3,4 @@ preprocessing/maestro-v2.0.0/*
 preprocessing/np_out/*
 Csvmidi.exe
 Midicsv.exe
+__pycache__/
