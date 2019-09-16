@@ -41,21 +41,21 @@ midi_list = [DATA_DIR + x for x in list(df.loc[:, 'midi_filename'])]
 
 meta_f = open(NP_META_PATH, 'w')
 display_count = 0
-for save_id, f in tqdm(enumerate(midi_list)):
+for save_id, f in enumerate(midi_list):
     display_count += 1
-    #print('\nProcessing ' + f + ' ' + str(display_count)  + '/' + str(len(midi_list)))
+    print('\nProcessing ' + f + ' ' + str(display_count)  + '/' + str(len(midi_list)))
     
-    #print('Parsing file.. ', end='')
+    print('Parsing file.. ', end='')
     stream = converter.parseFile(f, format='midi')
-    #print('Done.')
+    print('Done.')
 
-    #print('Flattening.. ', end='')
+    print('Flattening.. ', end='')
     elements = stream.flat.notes
-    #print('Done.')
+    print('Done.')
 
     note_dict = {}
 
-    #print('Ordering..')
+    print('Ordering..')
     for element in elements: # This enumerate function is pretty good, use to improve older projects
         current_time = round_down(float(Fraction(element.offset)), DUR_PRECISION) # Lose some precision in time
 

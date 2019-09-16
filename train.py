@@ -1,11 +1,14 @@
 import keras
 from keras.optimizers import Adam
+from keras.callbacks import ModelCheckpoint
 
 from data_generator import DataGenerator
 from model import create_model
 
 import pandas as pd
 from tqdm import tqdm
+
+import time
 
 # Function to generate ID_list from metafile
 def ID_list_generation(meta_file, seq_size):
@@ -48,7 +51,9 @@ model.compile(opt, loss='categorical_crossentropy', metrics=['accuracy'])
 print("Done.")
 
 # Start training
-# TODO: Checkpoints while training
+start_time = int(time.time())
+mdl_check = ModelCheckpoint('./models/tchAIkovsky-{start_time}-{epoch:02d}.h5')
 model.fit_generator(generator=training_generator, validation_data=validation_generator,
                     epochs=20, steps_per_epoch=len(ID_list[:-1000]) // 32,
-                    use_multiprocessing=False)
+                    use_multiprocessing=False, workers=1,
+                    callbacks=[mdl_check])
