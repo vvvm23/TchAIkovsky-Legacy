@@ -43,8 +43,8 @@ class DataGenerator(keras.utils.Sequence):
             start = ID[1]
             
             # Is it better to load entire file or mmap?
-            #midi_vectors = np.load(file_name, mmap_mode='r') 
-            midi_vectors = np.load(file_name)
+            midi_vectors = np.load(file_name, mmap_mode='r') 
+            #midi_vectors = np.load(file_name)
             #print(midi_vectors.shape, start, file_name)
             try:
                 X[i, :, :] = midi_vectors[start:start+self.seq_size, :]

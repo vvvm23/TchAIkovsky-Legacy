@@ -37,8 +37,8 @@ print("Done.")
 
 # ID split is placeholder for now, potentially use maestro metadata to split?
 print("Creating Data Generators.. ", end='')
-training_generator = DataGenerator(176, ID_list[:-1000], shuffle=False)
-validation_generator = DataGenerator(176, ID_list[-1000:])
+training_generator = DataGenerator(176, ID_list[:-1000], shuffle=False, batch_size=64)
+validation_generator = DataGenerator(176, ID_list[-1000:], batch_size=64)
 print("Done.")
 
 # TODO: Adjust training parameters
@@ -52,8 +52,8 @@ print("Done.")
 
 # Start training
 start_time = int(time.time())
-mdl_check = ModelCheckpoint('./models/tchAIkovsky-{start_time}-{epoch:02d}.h5')
+mdl_check = ModelCheckpoint("./models/tchAIkovsky-" + str(start_time) + "-{epoch:02d}.h5")
 model.fit_generator(generator=training_generator, validation_data=validation_generator,
-                    epochs=20, steps_per_epoch=len(ID_list[:-1000]) // 32,
+                    epochs=20, steps_per_epoch=len(ID_list[:-1000]) // 64,
                     use_multiprocessing=False, workers=1,
                     callbacks=[mdl_check])
