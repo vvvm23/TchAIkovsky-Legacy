@@ -10,6 +10,8 @@ from music21.stream import Stream
 
 from time import time
 
+from tqdm import tqdm
+
 class MusicGenerator:
     def __init__(self, model_path=None, start_path=None):
         self.model_path = model_path
@@ -18,7 +20,7 @@ class MusicGenerator:
         if model_path == None:
             print("Missing model path, please provide as arg in generate.")
         else:
-            if _load_model():
+            if self._load_model():
                 print(f"Failed to load model from path {self.model_path}.")
                 exit()
 
@@ -26,39 +28,39 @@ class MusicGenerator:
         if start_path == None:
             print("Missing start path, please provide as arg in generate.")
         else:
-            if _load_start():
+            if self._load_start():
                 print(f"Failed to load start data from path {self.start_path}.")
                 exit()
 
-    def _load_model(self, model_path):
+    def _load_model(self):
         try:
-            self.model = load_model(model_path)
-        except Exception as e:
-            print(e.message)
-            return 0
-        return 1
+            self.model = load_model(self.model_path)
+        except:
+            return 1
+        return 0
 
-    def _load_start(self, start_path):
+    def _load_start(self):
         try:
-            start = np.load(start_path)
+            start = np.load(self.start_path)
             self.start = start[:100, :]
-        except Exception as e:
-            print(e.message)
-            return 0
-        return 1
+        except:
+            return 1
+        return 0
 
+    # TODO: Remove 'magic' numbers
     def _generate_vectors(self, gen_len):
         ON_THRESHOLD = 0.8
 
         output = np.empty((gen_len, self.start.shape[1]))
         seed = self.start
 
-        for i in range(len(gen_len)):
-            output[i, :] = self.model.predict(seed, batch_size=1)
+        for i in tqdm(range(gen_len)):
+            output[i, :] = self.model.predict(seed.reshape(1, 100, 176), batch_size=1).reshape(176)
             for n in range(0, seed.shape[1], 2):
                 output[i, n] = 1 if output[i, n] > ON_THRESHOLD else 0
 
-            seed = np.append(seed[1:, :], output[i, :], axis=0)
+            #print(seed[1:, :].shape, output[i, :].shape)
+            seed = np.append(seed[1:, :], output[i, :].reshape(1, 176), axis=0)
 
         return output
 
@@ -68,7 +70,7 @@ class MusicGenerator:
 
         stream = Stream()
 
-        for t in range(len(vector_sequence.shape[0])):
+        for t in tqdm(range(vector_sequence.shape[0])):
             offset = DUR_PREC * t
             notes_vec = []
 
@@ -96,12 +98,22 @@ class MusicGenerator:
 
         if self.model_path == None:
             self.model_path = model_path
-            _load_model()
+            self._load_model() # Do checking here
 
         if self.start_path == None:
             self.start_path = start_path
-            _load_start()
+            self._load_start() # And here
 
-        vector_sequence = _generate_vectors(gen_len)
-        note_stream = _parse_vectors(vector_sequence)
-        note_stream.write('midi', f"./music/{int(time())}")
+        print("Generating Music Vectors")
+        vector_sequence = self._generate_vectors(gen_len)
+
+        print("Parsing Music Vectors")
+        note_stream = self._parse_vectors(vector_sequence)
+
+        save_name = int(time())
+        print(f"Saving to file ./music/{save_name}.midi")
+        note_stream.write('midi', f"./music/{save_name}.midi")
+        #note_stream.write('midi')
+
+generator = MusicGenerator("./models/tchAIkovsky-1568651365-03.h5", "./preprocessing/np_out/0.npy")
+generator.generate(gen_len=5000)
