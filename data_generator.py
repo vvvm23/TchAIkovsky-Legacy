@@ -3,7 +3,7 @@ import keras
 
 # Data Generator for handling our converted MIDI files
 class DataGenerator(keras.utils.Sequence):
-    def __init__(self, dim, ID_list, batch_size=32, seq_size=500, shuffle=True):
+    def __init__(self, dim, ID_list, batch_size=32, seq_size=200, shuffle=True):
         self.dim = dim
         self.batch_size = batch_size
         self.shuffle = shuffle
@@ -16,7 +16,6 @@ class DataGenerator(keras.utils.Sequence):
 
     # Get one batch of data
     def __getitem__(self, index):
-        
         if len(self.ID_list) - index*self.batch_size < self.batch_size:
             _indexes = self.indexes[index*self.batch_size:]
         else:
