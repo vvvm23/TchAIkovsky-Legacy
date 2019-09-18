@@ -3,7 +3,7 @@ import keras
 
 # Data Generator for handling our converted MIDI files
 class DataGenerator(keras.utils.Sequence):
-    def __init__(self, dim, ID_list, batch_size=32, seq_size=100, shuffle=True):
+    def __init__(self, dim, ID_list, batch_size=32, seq_size=500, shuffle=True):
         self.dim = dim
         self.batch_size = batch_size
         self.shuffle = shuffle
@@ -44,16 +44,10 @@ class DataGenerator(keras.utils.Sequence):
             
             # Is it better to load entire file or mmap?
             midi_vectors = np.load(file_name, mmap_mode='r') 
-            #midi_vectors = np.load(file_name)
-            #print(midi_vectors.shape, start, file_name)
             try:
                 X[i, :, :] = midi_vectors[start:start+self.seq_size, :]
             except:
-                print(X.shape, midi_vectors.shape, ID)
                 exit()
             Y[i, :] = midi_vectors[start+self.seq_size, :]
 
         return X, Y
-
-
-
