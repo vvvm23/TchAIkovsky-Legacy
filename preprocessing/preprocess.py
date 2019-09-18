@@ -5,6 +5,14 @@ from music21 import converter, note, chord, midi
 from fractions import Fraction
 import numpy as np
 
+'''
+    Maybe a better idea would be to have different input channels. One is note value, one is duration, one is on or off.
+    Set number of channels, so input size is nb_channels*3
+    Output same.
+    Ignore if number of channels too large.
+    Let me try large test on current set up first though
+'''
+
 def round_down(num, factor):
     return num - (num % factor)
 

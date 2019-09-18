@@ -10,6 +10,8 @@ from tqdm import tqdm
 
 import time
 
+import random
+
 # Function to generate ID_list from metafile
 def ID_list_generation(meta_file, seq_size):
     df = pd.read_csv(meta_file, header=None, usecols=[0,1])
@@ -23,6 +25,7 @@ def ID_list_generation(meta_file, seq_size):
 
 print("Generating ID List.. ", end='')
 ID_list = ID_list_generation("./preprocessing/np_out/META.csv", 100)
+random.shuffle(ID_list)
 print("Done.")
 
 # TODO: Parameterisation, maybe in different file
