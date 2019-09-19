@@ -115,5 +115,5 @@ class MusicGenerator:
         note_stream.write('midi', f"./music/{save_name}.midi")
         #note_stream.write('midi')
 
-generator = MusicGenerator("./models/tchAIkovsky-1568651365-03.h5", "./preprocessing/np_out/0.npy")
+generator = MusicGenerator("./models/tchAIkovsky-1568822616-01.h5", "./preprocessing/np_out/123.npy")
 generator.generate(gen_len=5000)
