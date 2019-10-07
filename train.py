@@ -37,31 +37,35 @@ def multi_ID_list_generation(meta_file, seq_size, workers=8):
 
     return [x for y in worker_output for x in y]
 
+params = {
+    'meta_file': "./preprocessing/np_out/META.csv",
+    'input_shape': (200, 176),
+    'shuffle': True,
+    'batch_size': 64,
+    'alpha': 0.0001,
+    'model_path': "./models",
+    'epochs': 20,
+    'nb_workers': 8
+}
+
 print("Generating ID List.. ", end='')
-#ID_list = ID_list_generation("./preprocessing/np_out/META.csv", 200)
-ID_list = multi_ID_list_generation("./preprocessing/np_out/META.csv", 200, workers=8)
+ID_list = multi_ID_list_generation(params['meta_file'], params['input_shape'][0], workers=params['nb_workers'])
 
 random.shuffle(ID_list)
 print("Done.")
 
-# TODO: Parameterisation, maybe in different file
-params = {
-
-}
-
 print("Creating Model.. ", end='')
-model = create_model((200, 176))
+model = create_model(params['input_shape'])
 print("Done.")
 
 # ID split is placeholder for now, potentially use maestro metadata to split?
 print("Creating Data Generators.. ", end='')
-training_generator = DataGenerator(176, ID_list[:-1000], shuffle=True, batch_size=64)
-validation_generator = DataGenerator(176, ID_list[-1000:], shuffle=False, batch_size=64)
+training_generator = DataGenerator(params['input_shape'][1], ID_list[:-1000], shuffle=params['shuffle'], batch_size=params['batch_size'])
+validation_generator = DataGenerator(params['input_shape'][1], ID_list[-1000:], shuffle=False, batch_size=params['batch_size'])
 print("Done.")
 
-# TODO: Adjust training parameters
 print("Creating Optimiser.. ", end='')
-opt = Adam(lr=0.0001) # Is this loss right? 
+opt = Adam(lr=params['alpha']) # Is this loss right? 
 print("Done.")
 
 print("Compiling Model.. ", end='')
@@ -70,8 +74,8 @@ print("Done.")
 
 # Start training
 start_time = int(time.time())
-mdl_check = ModelCheckpoint("./models/tchAIkovsky-" + str(start_time) + "-{epoch:02d}.h5")
+mdl_check = ModelCheckpoint(f"{params['model_path']}/tchAIkovsky-" + str(start_time) + "-{epoch:02d}.h5")
 model.fit_generator(generator=training_generator, validation_data=validation_generator,
-                    epochs=20, steps_per_epoch=len(ID_list[:-1000]) // 64,
-                    use_multiprocessing=False, workers=8,
+                    epochs=params['epochs'], steps_per_epoch=len(ID_list[:-1000]) // params['batch_size'],
+                    use_multiprocessing=False, workers=params['nb_workers'],
                     callbacks=[mdl_check])
