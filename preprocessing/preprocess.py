@@ -93,11 +93,13 @@ for save_id, f in enumerate(midi_list):
         if not t in note_dict:
             continue
         
+        note_dict[t].sort(key=lambda x: x.pitch.midi)
+
         if len(note_dict[t]) <= MAX_NOTES:
-            token_seq[i] = '-'.join(n.pitch.midi for n in note_dict[t])[:-1]
+            token_seq[i] = '-'.join(str(n.pitch.midi) for n in note_dict[t])[:-1]
         else:
             ran_sample = np.random.choice(note_dict[t], MAX_NOTES, replace=False)
-            token_seq[i] = '-'.join(n.pitch.midi for n in ran_sample)[:-1]
+            token_seq[i] = '-'.join(str(n.pitch.midi) for n in ran_sample)[:-1]
 
         if not token_seq[i] in token_dict:
             token_dict[token_seq[i]] = nb_tokens
