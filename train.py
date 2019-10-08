@@ -22,8 +22,6 @@ import random
 import threading
 import concurrent.futures
  
-
-
 def multi_ID_list_generation(meta_file, seq_size, workers=8):
     worker_output = [[]] * 8
 
@@ -64,14 +62,11 @@ ID_list = multi_ID_list_generation(params['meta_file'], params['input_shape'][0]
 random.shuffle(ID_list)
 print("Done.")
 
-# ID split is placeholder for now, potentially use maestro metadata to split?
 print("Creating Data Generators.. ", end='')
-
 val_split = int(len(ID_list) * params['val_split_percent'])
 training_generator = DataGenerator(params['input_shape'][1], ID_list[:-val_split], shuffle=params['shuffle'], batch_size=params['batch_size'])
 validation_generator = DataGenerator(params['input_shape'][1], ID_list[-val_split:], shuffle=False, batch_size=params['batch_size'])
 print("Done.")
-
 print(f"{len(ID_list) - val_split} samples of training.\n{val_split} samples for validation.")
 
 print("Creating Model.. ", end='')
@@ -79,7 +74,7 @@ model = create_model(params['input_shape'])
 print("Done.")
 
 print("Creating Optimiser.. ", end='')
-opt = Adam(lr=params['alpha']) # Is this loss right? 
+opt = Adam(lr=params['alpha'])
 print("Done.")
 
 print("Compiling Model.. ", end='')

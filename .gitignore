@@ -4,3 +4,5 @@ preprocessing/np_out/*
 Csvmidi.exe
 Midicsv.exe
 __pycache__/
+models/
+music/
