@@ -40,8 +40,9 @@ MAX_MIDI = 108
 NB_NOTES = MAX_MIDI - MIN_MIDI + 1
 INPUT_SIZE = 2 * NB_NOTES
 SEQ_LEN = 100
-DUR_PRECISION = 0.1
+DUR_PRECISION = 0.25
 DUR_NORM = 4.0
+MAX_NOTES = 5
 
 df = pd.read_csv(META_PATH)
 midi_list = [DATA_DIR + x for x in list(df.loc[:, 'midi_filename'])]
@@ -78,9 +79,33 @@ for save_id, f in enumerate(midi_list):
             except KeyError as e:
                 note_dict[current_time] = [n for n in element.notes]
     
+    token_seq = ["0-" * MAX_NOTES] * (int(max(note_dict) / DUR_PRECISION) + 1)
+    token_seq = token_seq[:-1] 
+    int_seq = np.zeros(int(max(note_dict) / DUR_PRECISION) + 1)
+
     vector_seq = np.zeros((int(max(note_dict) / DUR_PRECISION) + 1, INPUT_SIZE))
     i = 0
 
+    nb_tokens = 1
+    token_dict = {"0-0-0-0-0": 0} # CHANGE THIS
+
+    for i, t in enumerate(frange(0.0, max(note_dict), DUR_PRECISION)):
+        if not t in note_dict:
+            continue
+        
+        if len(note_dict[t]) <= MAX_NOTES:
+            token_seq[i] = '-'.join(n.pitch.midi for n in note_dict[t])[:-1]
+        else:
+            ran_sample = np.random.choice(note_dict[t], MAX_NOTES, replace=False)
+            token_seq[i] = '-'.join(n.pitch.midi for n in ran_sample)[:-1]
+
+        if not token_seq[i] in token_dict:
+            token_dict[token_seq[i]] = nb_tokens
+            nb_tokens += 1
+
+        int_seq[i] = token_dict[token_seq[i]]
+
+    '''
     # Iterate through timestamps based on DUR_PRECISION and vectorise
     for t in frange(0.0, max(note_dict), DUR_PRECISION):
         try:
@@ -97,5 +122,8 @@ for save_id, f in enumerate(midi_list):
     # Save to file and update metafile
     np.save("./np_out/{0}.npy".format(save_id), vector_seq)
     meta_f.write("preprocessing/np_out/{0}.npy, {1}\n".format(save_id, vector_seq.shape[0]))
+    '''
+    np.save("./np_out/int_{0}.npy".format(save_id), int_seq)
+    meta_f.write("preprocessing/np_out/int_{0}.npy, {1}\n".format(save_id, int_seq.shape[0]))
 
 meta_f.close()
