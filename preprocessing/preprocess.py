@@ -10,7 +10,6 @@ import numpy as np
     Set number of channels, so input size is nb_channels*3
     Output same.
     Ignore if number of channels too large.
-    Let me try large test on current set up first though
 '''
 
 def round_down(num, factor):

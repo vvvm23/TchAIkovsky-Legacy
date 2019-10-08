@@ -42,7 +42,7 @@ class MusicGenerator:
     def _load_start(self):
         try:
             start = np.load(self.start_path)
-            self.start = start[:100, :]
+            self.start = start[:200, :]
         except:
             return 1
         return 0
@@ -55,7 +55,7 @@ class MusicGenerator:
         seed = self.start
 
         for i in tqdm(range(gen_len)):
-            output[i, :] = self.model.predict(seed.reshape(1, 100, 176), batch_size=1).reshape(176)
+            output[i, :] = self.model.predict(seed.reshape(1, 200, 176), batch_size=1).reshape(176)
             for n in range(0, seed.shape[1], 2):
                 output[i, n] = 1 if output[i, n] > ON_THRESHOLD else 0
 
@@ -115,5 +115,5 @@ class MusicGenerator:
         note_stream.write('midi', f"./music/{save_name}.midi")
         #note_stream.write('midi')
 
-generator = MusicGenerator("./models/tchAIkovsky-1568822616-01.h5", "./preprocessing/np_out/123.npy")
-generator.generate(gen_len=5000)
+generator = MusicGenerator("./models/tchAIkovsky-1568822616-12.h5", "./preprocessing/np_out/123.npy")
+generator.generate(gen_len=1000)

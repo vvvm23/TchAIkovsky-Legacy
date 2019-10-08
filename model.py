@@ -4,7 +4,7 @@ from keras.layers import LSTM, Dense, Dropout, Flatten, TimeDistributed, CuDNNLS
 # TODO: Parameterise this properly
 def create_model(input_shape):
     model = Sequential()
-    model.add(CuDNNLSTM(64, input_shape=input_shape, return_sequences=True))
+    model.add(CuDNNLSTM(128, input_shape=input_shape, return_sequences=True))
     model.add(Dropout(0.5))
 
     model.add(CuDNNLSTM(64, return_sequences=True))
@@ -13,7 +13,7 @@ def create_model(input_shape):
     #model.add(CuDNNLSTM(64, return_sequences=True))
     #model.add(Dropout(0.5))
 
-    model.add(CuDNNLSTM(64, return_sequences=False))
+    model.add(CuDNNLSTM(128, return_sequences=False))
     model.add(Dropout(0.5))
 
     #model.add(TimeDistributed(Dense(128, activation='relu')))

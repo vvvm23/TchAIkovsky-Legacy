@@ -1,4 +1,11 @@
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+import tensorflow as tf
+from tensorflow import logging
+logging.set_verbosity(logging.ERROR)
+
 import keras
+
 from keras.optimizers import Adam
 from keras.callbacks import ModelCheckpoint
 
@@ -15,6 +22,8 @@ import random
 import threading
 import concurrent.futures
  
+
+
 def multi_ID_list_generation(meta_file, seq_size, workers=8):
     worker_output = [[]] * 8
 
@@ -45,7 +54,8 @@ params = {
     'alpha': 0.0001,
     'model_path': "./models",
     'epochs': 20,
-    'nb_workers': 8
+    'nb_workers': 8,
+    'val_split_percent': 0.01
 }
 
 print("Generating ID List.. ", end='')
@@ -54,14 +64,18 @@ ID_list = multi_ID_list_generation(params['meta_file'], params['input_shape'][0]
 random.shuffle(ID_list)
 print("Done.")
 
-print("Creating Model.. ", end='')
-model = create_model(params['input_shape'])
-print("Done.")
-
 # ID split is placeholder for now, potentially use maestro metadata to split?
 print("Creating Data Generators.. ", end='')
-training_generator = DataGenerator(params['input_shape'][1], ID_list[:-1000], shuffle=params['shuffle'], batch_size=params['batch_size'])
-validation_generator = DataGenerator(params['input_shape'][1], ID_list[-1000:], shuffle=False, batch_size=params['batch_size'])
+
+val_split = int(len(ID_list) * params['val_split_percent'])
+training_generator = DataGenerator(params['input_shape'][1], ID_list[:-val_split], shuffle=params['shuffle'], batch_size=params['batch_size'])
+validation_generator = DataGenerator(params['input_shape'][1], ID_list[-val_split:], shuffle=False, batch_size=params['batch_size'])
+print("Done.")
+
+print(f"{len(ID_list) - val_split} samples of training.\n{val_split} samples for validation.")
+
+print("Creating Model.. ", end='')
+model = create_model(params['input_shape'])
 print("Done.")
 
 print("Creating Optimiser.. ", end='')
