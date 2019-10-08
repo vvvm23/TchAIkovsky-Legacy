@@ -55,7 +55,7 @@ params = {
     'model_path': "./models",
     'epochs': 20,
     'nb_workers': 8,
-    'val_split_percent': 0.01
+    'val_split_percent': 0.005
 }
 
 print("Generating ID List.. ", end='')
