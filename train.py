@@ -22,6 +22,8 @@ import random
 import threading
 import concurrent.futures
  
+import pickle
+
 def multi_ID_list_generation(meta_file, seq_size, workers=8):
     worker_output = [[]] * 8
 
@@ -44,6 +46,25 @@ def multi_ID_list_generation(meta_file, seq_size, workers=8):
 
     return [x for y in worker_output for x in y]
 
+# Loads token list and produces token_id-argmax dictionary and argmax-token dictionary
+def load_token_list(path):
+    f = open(path, 'rb')
+    token_list = pickle.load(f)
+    f.close()
+
+    # First produce token_id-argmax
+    token_dict = {}
+    for t in token_list:
+        token_dict[t[1]] = t[0]
+
+    # Next produce argmax_token
+    argmax_dict = {}
+    for t in token_list:
+        argmax_dict[t[0]] = t[2]
+
+    return token_dict, argmax_dict 
+
+
 params = {
     'meta_file': "./preprocessing/np_out/META.csv",
     'input_shape': (200, 176),
@@ -65,15 +86,19 @@ ID_list = multi_ID_list_generation(params['meta_file'], params['input_shape'][0]
 random.shuffle(ID_list)
 print("Done.")
 
+print("Loading token dictionary.. ", end='')
+token_dict, argmax_dict = load_token_list("./preprocessing/token_list.pkl")
+print("Done.")
+
 print("Creating Data Generators.. ", end='')
 val_split = int(len(ID_list) * params['val_split_percent'])
-training_generator = DataGenerator(params['input_shape'][1], ID_list[:-val_split], shuffle=params['shuffle'], batch_size=params['batch_size'])
-validation_generator = DataGenerator(params['input_shape'][1], ID_list[-val_split:], shuffle=False, batch_size=params['batch_size'])
+training_generator = DataGenerator(params['nb_tokens'] + 1, ID_list[:-val_split], token_dict, shuffle=params['shuffle'], batch_size=params['batch_size'])
+validation_generator = DataGenerator(params['nb_tokens'] + 1, ID_list[-val_split:], token_dict, shuffle=False, batch_size=params['batch_size'])
 print("Done.")
 print(f"{len(ID_list) - val_split} samples of training.\n{val_split} samples for validation.")
 
 print("Creating Model.. ", end='')
-model = create_model(params['seq_len'], params['nb_tokens'], params['vocab_size'])
+model = create_model(params['seq_len'], params['nb_tokens'] + 1, params['vocab_size'])
 print("Done.")
 
 print("Creating Optimiser.. ", end='')
