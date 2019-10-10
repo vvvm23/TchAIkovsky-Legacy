@@ -53,7 +53,10 @@ params = {
     'model_path': "./models",
     'epochs': 20,
     'nb_workers': 8,
-    'val_split_percent': 0.005
+    'val_split_percent': 0.005,
+    'seq_len': 200,
+    'nb_tokens': 1000,
+    'vocab_size': 128
 }
 
 print("Generating ID List.. ", end='')
@@ -70,7 +73,7 @@ print("Done.")
 print(f"{len(ID_list) - val_split} samples of training.\n{val_split} samples for validation.")
 
 print("Creating Model.. ", end='')
-model = create_model(params['input_shape'])
+model = create_model(params['seq_len'], params['nb_tokens'], params['vocab_size'])
 print("Done.")
 
 print("Creating Optimiser.. ", end='')

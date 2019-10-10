@@ -142,7 +142,8 @@ sorted_tokens = sorted(token_dict.items(), key=lambda x: x[1][1], reverse=True)[
 
 save_list = [(0, 0, "0-0-0-0-0")] # change this magic string
 for i, t in enumerate(sorted_tokens):
-    save_list.append((i+1, t[1][0], t[0]))
+    save_list.append((i+1, t[1][0], t[0])) # This method means we have to convert from real token to argmax in DataGenerator
+                                           # Test how slow this is.
 
 print("\n".join(f"{t[0]} - {t[1]} - {t[2]}" for t in save_list))
 
