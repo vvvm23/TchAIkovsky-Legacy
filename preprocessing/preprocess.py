@@ -54,7 +54,7 @@ display_count = 0
 nb_tokens = 1
 token_dict = {"0-0-0-0-0": (0,0)} # CHANGE THIS
 
-for save_id, f in enumerate(midi_list):
+for save_id, f in enumerate(midi_list[:50]):
     display_count += 1
     print('\nProcessing ' + f + ' ' + str(display_count)  + '/' + str(len(midi_list)))
     
@@ -74,14 +74,14 @@ for save_id, f in enumerate(midi_list):
 
         # Add to timestamp if exists, else create a new timestamp
         if isinstance(element, note.Note):
-            try:
+            if current_time in note_dict:
                 note_dict[current_time].append(element)
-            except KeyError as e:
+            else:
                 note_dict[current_time] = [element]
         elif isinstance(element, chord.Chord):
-            try:
+            if current_time in note_dict:
                 note_dict[current_time] = note_dict[current_time] + [n for n in element.notes]
-            except KeyError as e:
+            else:
                 note_dict[current_time] = [n for n in element.notes]
     
     token_seq = ["0-" * MAX_NOTES] * (int(max(note_dict) / DUR_PRECISION) + 1)
@@ -135,10 +135,18 @@ for save_id, f in enumerate(midi_list):
     np.save("./np_out/int_{0}.npy".format(save_id), int_seq)
     meta_f.write("preprocessing/np_out/int_{0}.npy, {1}\n".format(save_id, int_seq.shape[0]))
     meta_f.flush()
-sorted_tokens = sorted(token_dict.items(), key=lambda x: x[1][1], reverse=True)
-print("\n".join(f"{x[0]} - {x[1][1]}" for x in sorted_tokens[:10]))
 
-with open('./token_dict.pkl', 'wb') as f:
-    pickle.dump(token_dict, f, pickle.HIGHEST_PROTOCOL)
+# Need to map real token IDs to top X ids for argmax output
+TOP_TOKENS = 1000
+sorted_tokens = sorted(token_dict.items(), key=lambda x: x[1][1], reverse=True)[:TOP_TOKENS]
+
+save_list = [(0, 0, "0-0-0-0-0")] # change this magic string
+for i, t in enumerate(sorted_tokens):
+    save_list.append((i+1, t[1][0], t[0]))
+
+print("\n".join(f"{t[0]} - {t[1]} - {t[2]}" for t in save_list))
+
+with open('./token_list.pkl', 'wb') as f:
+    pickle.dump(save_list, f, pickle.HIGHEST_PROTOCOL)
 
 meta_f.close()
