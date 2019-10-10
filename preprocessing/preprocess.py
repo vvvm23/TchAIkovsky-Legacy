@@ -4,6 +4,7 @@ from tqdm import tqdm
 from music21 import converter, note, chord, midi
 from fractions import Fraction
 import numpy as np
+import pickle
 
 '''
     Maybe a better idea would be to have different input channels. One is note value, one is duration, one is on or off.
@@ -49,6 +50,10 @@ midi_list = [DATA_DIR + x for x in list(df.loc[:, 'midi_filename'])]
 
 meta_f = open(NP_META_PATH, 'w')
 display_count = 0
+
+nb_tokens = 1
+token_dict = {"0-0-0-0-0": (0,0)} # CHANGE THIS
+
 for save_id, f in enumerate(midi_list):
     display_count += 1
     print('\nProcessing ' + f + ' ' + str(display_count)  + '/' + str(len(midi_list)))
@@ -86,26 +91,28 @@ for save_id, f in enumerate(midi_list):
     vector_seq = np.zeros((int(max(note_dict) / DUR_PRECISION) + 1, INPUT_SIZE))
     i = 0
 
-    nb_tokens = 1
-    token_dict = {"0-0-0-0-0": 0} # CHANGE THIS
-
     for i, t in enumerate(frange(0.0, max(note_dict), DUR_PRECISION)):
         if not t in note_dict:
             continue
         
-        note_dict[t].sort(key=lambda x: x.pitch.midi)
-
+        #note_dict[t].sort(key=lambda x: x.pitch.midi)
+        
+        
         if len(note_dict[t]) <= MAX_NOTES:
-            token_seq[i] = '-'.join(str(n.pitch.midi) for n in note_dict[t])[:-1]
+            notes = sorted([x.pitch.midi for x in note_dict[t]])
+            token_seq[i] = '-'.join(str(n) for n in notes)
         else:
             ran_sample = np.random.choice(note_dict[t], MAX_NOTES, replace=False)
-            token_seq[i] = '-'.join(str(n.pitch.midi) for n in ran_sample)[:-1]
+            notes = sorted([x.pitch.midi for x in ran_sample])
+            token_seq[i] = '-'.join(str(n) for n in notes)
 
         if not token_seq[i] in token_dict:
-            token_dict[token_seq[i]] = nb_tokens
+            token_dict[token_seq[i]] = (nb_tokens, 1)
             nb_tokens += 1
+        else:
+            token_dict[token_seq[i]] = (token_dict[token_seq[i]][0], token_dict[token_seq[i]][1] + 1)
 
-        int_seq[i] = token_dict[token_seq[i]]
+        int_seq[i] = token_dict[token_seq[i]][0]
 
     '''
     # Iterate through timestamps based on DUR_PRECISION and vectorise
@@ -127,5 +134,11 @@ for save_id, f in enumerate(midi_list):
     '''
     np.save("./np_out/int_{0}.npy".format(save_id), int_seq)
     meta_f.write("preprocessing/np_out/int_{0}.npy, {1}\n".format(save_id, int_seq.shape[0]))
+    meta_f.flush()
+sorted_tokens = sorted(token_dict.items(), key=lambda x: x[1][1], reverse=True)
+print("\n".join(f"{x[0]} - {x[1][1]}" for x in sorted_tokens[:10]))
+
+with open('./token_dict.pkl', 'wb') as f:
+    pickle.dump(token_dict, f, pickle.HIGHEST_PROTOCOL)
 
 meta_f.close()
