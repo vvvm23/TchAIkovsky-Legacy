@@ -54,7 +54,7 @@ display_count = 0
 nb_tokens = 1
 token_dict = {"0-0-0-0-0": (0,0)} # CHANGE THIS
 
-for save_id, f in enumerate(midi_list[:20]):
+for save_id, f in enumerate(midi_list):
     display_count += 1
     print('\nProcessing ' + f + ' ' + str(display_count)  + '/' + str(len(midi_list)))
     
