@@ -1,7 +1,5 @@
 preprocessing/csv_out/*
 preprocessing/maestro-v2.0.0/*
-preprocessing/np_out/*
-preprocessing/np_out old/*
 Csvmidi.exe
 Midicsv.exe
 __pycache__/

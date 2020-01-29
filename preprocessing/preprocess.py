@@ -1,153 +1,120 @@
-import pandas as pd
 import os
-from tqdm import tqdm
-from music21 import converter, note, chord, midi
-from fractions import Fraction
 import numpy as np
-import pickle
+import argparse
+import pandas as pd
+from tqdm import tqdm
 
 '''
-    Maybe a better idea would be to have different input channels. One is note value, one is duration, one is on or off.
-    Set number of channels, so input size is nb_channels*3
-    Output same.
-    Ignore if number of channels too large.
+    Preprocessing
+        1) Call Midicsv on file.
+        2) Read in resulting csv line by line
+            - If new velocity
+                * add velocity change event
+
+            - If at old time
+                * add corresponding event to int sequence
+            - If at new time
+                * add time change event to int sequence
+                * add corresponding event to int sequence
+
+        3) Take int sequence and one hot encode in vector sequence
+        4) Save to .npy file (or .h5)
+            
+    Arguments
+        max_note: Maximum midi note value (default 108)
+        min_note: Minimum midi note value (default 21)
+        max_time: Maximum time jump in ms (default 1000ms)
+        time_interval: Interval between discrete time steps (default 8ms)
+        max_vel: Maximum velocity
+        min_vel: Minimum velocity
+        vel_jump: Jump in velocity
+        meta_data_path: path to maestro meta data file (default ./maestro-v2.0.0/maestro-v2.0.0.csv)
+        output_dir: path to output directory (default ./np_out)
+        midicsv_executable_path: path to midicsv.exe (default ./midicsv_executable_path)
 '''
+def update_npy_meta(f, name, length, split):
+    f.write(f"{name}.npy, {length}, {split}\n")
 
-def round_down(num, factor):
-    return num - (num % factor)
+def save_to_npy(seq, name, split):
+    if split == "train":
+        np.save(f"{OUTPUT_DIR}train/{name}.npy", seq)
+    elif split == "validation":
+        np.save(f"{OUTPUT_DIR}validation/{name}.npy", seq)
 
-# TODO: Replace with np.linspace
-def frange(start, stop, jump, end=False, via_str=False):
-    if via_str:
-        start = str(start)
-        stop = str(stop)
-        jump = str(jump)
-    start = Fraction(start)
-    stop = Fraction(stop)
-    jump = Fraction(jump)
-    while start < stop:
-        yield float(start)
-        start += jump
-    if end and start == stop:
-        yield(float(start))
+def seq_to_np(seq):
+    n = len(seq)
+    out = np.zeros((n, 2*NB_NOTES+NB_TIME+NB_VEL))
+    out[np.arange(n), seq] = 1.0
+    return out
 
-# TODO: Properly parameterise this
-META_PATH = "./maestro-v2.0.0/maestro-v2.0.0.csv"
-NP_META_PATH = "./np_out/META.csv"
-DATA_DIR = "maestro-v2.0.0/"
+def csv_to_seq(csv_path):
+    #In the maestro dataset, there is only ever one track. So we can ignore track 1 and 2 completely
 
-MIN_MIDI = 21
-MAX_MIDI = 108
-NB_NOTES = MAX_MIDI - MIN_MIDI + 1
-INPUT_SIZE = 2 * NB_NOTES
-SEQ_LEN = 100
-DUR_PRECISION = 0.25
-DUR_NORM = 4.0
-MAX_NOTES = 5
-
-df = pd.read_csv(META_PATH)
-midi_list = [DATA_DIR + x for x in list(df.loc[:, 'midi_filename'])]
-
-meta_f = open(NP_META_PATH, 'w')
-display_count = 0
-
-nb_tokens = 1
-token_dict = {"0-0-0-0-0": (0,0)} # CHANGE THIS
-
-for save_id, f in enumerate(midi_list):
-    display_count += 1
-    print('\nProcessing ' + f + ' ' + str(display_count)  + '/' + str(len(midi_list)))
+    seq = []
     
-    print('Parsing file.. ', end='')
-    stream = converter.parseFile(f, format='midi')
-    print('Done.')
+    f = open(csv_path, mode='r')
+    lines = f.readlines()
+    for line in lines:
+        args = line.split(", ")
+        track = args[0]
+        time = args[1]
+        r_type = args[2]
+        other = args[3:]
 
-    print('Flattening.. ', end='')
-    elements = stream.flat.notes
-    print('Done.')
+    f.close()
 
-    note_dict = {}
+def midi_to_csv(path, save_name):
+    CSV_OUT = "./csv_out/"
+    os.system(f"{MIDICSV_PATH} {path} {save_name}")    
 
-    print('Ordering..')
-    for element in elements: # This enumerate function is pretty good, use to improve older projects
-        current_time = round_down(float(Fraction(element.offset)), DUR_PRECISION) # Lose some precision in time
+def read_meta():
+    df = pd.read_csv(META_DATA_PATH, usecols=["midi_filename", "split"])
+    return df
 
-        # Add to timestamp if exists, else create a new timestamp
-        if isinstance(element, note.Note):
-            if current_time in note_dict:
-                note_dict[current_time].append(element)
-            else:
-                note_dict[current_time] = [element]
-        elif isinstance(element, chord.Chord):
-            if current_time in note_dict:
-                note_dict[current_time] = note_dict[current_time] + [n for n in element.notes]
-            else:
-                note_dict[current_time] = [n for n in element.notes]
+def preprocess():
+    npy_meta_file = open(f"{OUTPUT_DIR}/META.csv", mode='a')
+    midi_dataframe = read_meta()
+
+    for index, row in tqdm(midi_dataframe.iterrows()):
+        csv_path = f"{CSV_OUT}{index}.csv"
+        midi_to_csv(f"./maestro-v2.0.0/{row[1]}", csv_path)
+        int_seq = csv_to_seq(csv_path)
+        npy_seq = seq_to_np(int_seq)
+        save_to_npy(npy_seq, index, row[0])
+        update_npy_meta(npy_meta_file, index, npy_seq.shape[0], row[0])
+
+    npy_meta_file.close()
+
+if __name__ == "__main__":
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    parser = argparse.ArgumentParser("Preprocess MIDI data")
+    parser.add_argument("--max_note", type=int, help="Define maximum midi value to accept", default=108)
+    parser.add_argument("--min_note", type=int, help="Define minimum midi value to accept", default=21)
+    parser.add_argument("--max_time", type=int, help="Maximum time jump for one event in milliseconds", default=1000)
+    parser.add_argument("--time_interval", type=int, help="Interval between discrete time steps", default=8)
+    parser.add_argument("--max_vel", type=int, help="Maximum note velocity (volume)")
+    parser.add_argument("--min_vel", type=int, help="Minimum note velocity (volume)")
+    parser.add_argument("--vel_interval", type=int, help="Jump in discrete velocity levels")
+    parser.add_argument("--meta_data_path", type=str, help="Path to maestro meta csv file", default="./maestro-v2.0.0/maestro-v2.0.0.csv")
+    parser.add_argument("--output_dir", type=str, help="Path to output directory to place .npy files", default="./np_out/")
+    parser.add_argument("--midicsv_executable_path", type=str, help="Path to midicsv.exe", default="Midicsv.exe")
+    args = parser.parse_args()
+
+    MAX_NOTE = args.max_note
+    MIN_NOTE = args.min_note
+    MAX_TIME = args.max_time
+    TIME_INTERVAL = args.time_interval
+    MAX_VEL = args.max_vel
+    MIN_VEL = args.min_vel
+    VEL_INTERVAL = args.vel_interval
+    META_DATA_PATH = args.meta_data_path
+    OUTPUT_DIR = args.output_dir
+    MIDICSV_PATH = args.midicsv_executable_path
+
+    CSV_OUT = "./csv_out/"
+    NB_NOTES = MAX_NOTE - MIN_NOTE + 1
+    NB_TIME = MAX_TIME // TIME_INTERVAL
+    NB_VEL = (MAX_VEL - MIN_VEL) // VEL_INTERVAL
+
+    preprocess()
     
-    token_seq = ["0-" * MAX_NOTES] * (int(max(note_dict) / DUR_PRECISION) + 1)
-    token_seq = token_seq[:-1] 
-    int_seq = np.zeros(int(max(note_dict) / DUR_PRECISION) + 1)
-
-    vector_seq = np.zeros((int(max(note_dict) / DUR_PRECISION) + 1, INPUT_SIZE))
-    i = 0
-
-    for i, t in enumerate(frange(0.0, max(note_dict), DUR_PRECISION)):
-        if not t in note_dict:
-            continue
-        
-        #note_dict[t].sort(key=lambda x: x.pitch.midi)
-        
-        
-        if len(note_dict[t]) <= MAX_NOTES:
-            notes = sorted([x.pitch.midi for x in note_dict[t]])
-            token_seq[i] = '-'.join(str(n) for n in notes)
-        else:
-            ran_sample = np.random.choice(note_dict[t], MAX_NOTES, replace=False)
-            notes = sorted([x.pitch.midi for x in ran_sample])
-            token_seq[i] = '-'.join(str(n) for n in notes)
-
-        if not token_seq[i] in token_dict:
-            token_dict[token_seq[i]] = (nb_tokens, 1)
-            nb_tokens += 1
-        else:
-            token_dict[token_seq[i]] = (token_dict[token_seq[i]][0], token_dict[token_seq[i]][1] + 1)
-
-        int_seq[i] = token_dict[token_seq[i]][0]
-
-    '''
-    # Iterate through timestamps based on DUR_PRECISION and vectorise
-    for t in frange(0.0, max(note_dict), DUR_PRECISION):
-        try:
-            for n in note_dict[t]:
-                vector_seq[i, (n.pitch.midi - MIN_MIDI)*2] = 1.0
-                vector_seq[i, (n.pitch.midi - MIN_MIDI)*2 + 1] = n.quarterLength /  DUR_NORM
-        except KeyError as e:
-            pass
-        except:
-            raise
-
-        i += 1
-
-    # Save to file and update metafile
-    np.save("./np_out/{0}.npy".format(save_id), vector_seq)
-    meta_f.write("preprocessing/np_out/{0}.npy, {1}\n".format(save_id, vector_seq.shape[0]))
-    '''
-    np.save("./np_out/int_{0}.npy".format(save_id), int_seq)
-    meta_f.write("preprocessing/np_out/int_{0}.npy, {1}\n".format(save_id, int_seq.shape[0]))
-    meta_f.flush()
-
-# Need to map real token IDs to top X ids for argmax output
-TOP_TOKENS = 1000
-sorted_tokens = sorted(token_dict.items(), key=lambda x: x[1][1], reverse=True)[:TOP_TOKENS]
-
-save_list = [(0, 0, "0-0-0-0-0")] # change this magic string
-for i, t in enumerate(sorted_tokens):
-    save_list.append((i+1, t[1][0], t[0])) # This method means we have to convert from real token to argmax in DataGenerator
-                                           # Test how slow this is.
-
-print("\n".join(f"{t[0]} - {t[1]} - {t[2]}" for t in save_list))
-
-with open('./token_list.pkl', 'wb') as f:
-    pickle.dump(save_list, f, pickle.HIGHEST_PROTOCOL)
-
-meta_f.close()
