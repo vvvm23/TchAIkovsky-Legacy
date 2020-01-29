@@ -1,12 +1,12 @@
 import os
 
-#import keras
+import keras
 
-#from keras.optimizers import Adam
-#from keras.callbacks import ModelCheckpoint
+from keras.optimizers import Adam
+from keras.callbacks import ModelCheckpoint
 
-#from data_generator import DataGenerator
-#from model import create_model
+from data_generator import DataGenerator
+from model import create_model
 
 import pandas as pd
 from tqdm import tqdm
@@ -63,7 +63,7 @@ params = {
 }
 
 print("Generating ID Lists.. \n", end='', flush=True)
-training_ID_list, validation_ID_list = multi_ID_list_generation(params['meta_file'], params['input_shape'][0], workers=params['nb_workers'])
+training_ID_list, validation_ID_list = multi_ID_list_generation(params['meta_file'], params['seq_len'], workers=params['nb_workers'])
 print("Done.")
 
 print("Shuffling ID Lists.. ", end='', flush=True)
@@ -71,16 +71,15 @@ random.shuffle(training_ID_list)
 random.shuffle(validation_ID_list)
 print("Done")
 
-'''
 print("Creating Data Generators.. ", end='')
 val_split = int(len(ID_list) * params['val_split_percent'])
-training_generator = DataGenerator(params['nb_tokens'] + 1, training_ID_list, token_dict, shuffle=params['shuffle'], batch_size=params['batch_size'])
-validation_generator = DataGenerator(params['nb_tokens'] + 1, validation_ID_list, token_dict, shuffle=False, batch_size=params['batch_size'])
+training_generator = DataGenerator(317, params['seq_len'], training_ID_list, batch_size=params['batch_size'], shuffle=params['shuffle'])
+validation_generator = DataGenerator(317, params['seq_len'], validation_ID_list, batch_size=params['batch_size'], shuffle=False)
 print("Done.")
 print(f"{len(training_ID_list)} samples of training.\n{validation_ID_list} samples for validation.")
 
 print("Creating Model.. ", end='')
-model = create_model(params['seq_len'], params['nb_tokens'] + 1, params['vocab_size'])
+model = create_model()
 print("Done.")
 
 print("Creating Optimiser.. ", end='')
@@ -98,4 +97,3 @@ model.fit_generator(generator=training_generator, validation_data=validation_gen
                     epochs=params['epochs'], steps_per_epoch=len(ID_list[:-1000]) // params['batch_size'],
                     use_multiprocessing=False, workers=params['nb_workers'],
                     callbacks=[mdl_check])
-'''
