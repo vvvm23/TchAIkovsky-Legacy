@@ -37,7 +37,7 @@ def floorN(num, divisor):
     return num - (num%divisor)
 
 def update_npy_meta(f, name, length, split):
-    f.write(f"{OUTPUT_DIR}{split}/{name}.npy,{length},{split}\n")
+    f.write(f"./preprocessing/{OUTPUT_DIR}{split}/{name}.npy,{length},{split}\n")
 
 def save_to_npy(seq, name, split):
     if split == "train":
@@ -171,7 +171,7 @@ if __name__ == "__main__":
     parser.add_argument("--min_vel", type=int, help="Minimum note velocity (volume)", default=16)
     parser.add_argument("--vel_interval", type=int, help="Jump in discrete velocity levels", default=8)
     parser.add_argument("--meta_data_path", type=str, help="Path to maestro meta csv file", default="./maestro-v2.0.0/maestro-v2.0.0.csv")
-    parser.add_argument("--output_dir", type=str, help="Path to output directory to place .npy files", default="./np_out/")
+    parser.add_argument("--output_dir", type=str, help="Path to output directory to place .npy files", default="np_out/")
     parser.add_argument("--midicsv_executable_path", type=str, help="Path to midicsv.exe", default="Midicsv.exe")
     args = parser.parse_args()
 

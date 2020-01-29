@@ -53,13 +53,13 @@ params = {
     'meta_file': "./preprocessing/np_out/META.csv",
     'input_shape': (200, 317), #?
     'shuffle': True,
-    'batch_size': 64,
+    'batch_size': 32,
     'alpha': 0.001,
     'model_path': "./models",
-    'epochs': 20,
+    'epochs': 10,
     'nb_workers': 16,
-    'seq_len': 200,
-    'id_interval': 16
+    'seq_len': 400,
+    'id_interval': 32 
 }
 
 print("Generating ID Lists.. \n", end='', flush=True)
@@ -72,14 +72,13 @@ random.shuffle(validation_ID_list)
 print("Done")
 
 print("Creating Data Generators.. ", end='')
-val_split = int(len(ID_list) * params['val_split_percent'])
 training_generator = DataGenerator(317, params['seq_len'], training_ID_list, batch_size=params['batch_size'], shuffle=params['shuffle'])
 validation_generator = DataGenerator(317, params['seq_len'], validation_ID_list, batch_size=params['batch_size'], shuffle=False)
 print("Done.")
-print(f"{len(training_ID_list)} samples of training.\n{validation_ID_list} samples for validation.")
+print(f"{len(training_ID_list)} samples of training.\n{len(validation_ID_list)} samples for validation.")
 
 print("Creating Model.. ", end='')
-model = create_model()
+model = create_model(params['seq_len'])
 print("Done.")
 
 print("Creating Optimiser.. ", end='')
@@ -94,6 +93,6 @@ print("Done.")
 start_time = int(time.time())
 mdl_check = ModelCheckpoint(f"{params['model_path']}/tchAIkovsky-" + str(start_time) + "-{epoch:02d}.h5")
 model.fit_generator(generator=training_generator, validation_data=validation_generator,
-                    epochs=params['epochs'], steps_per_epoch=len(ID_list[:-1000]) // params['batch_size'],
+                    epochs=params['epochs'], steps_per_epoch=len(training_ID_list) // params['batch_size'],
                     use_multiprocessing=False, workers=params['nb_workers'],
                     callbacks=[mdl_check])
