@@ -59,14 +59,17 @@ params = {
     'epochs': 20,
     'nb_workers': 16,
     'seq_len': 200,
-    'id_interval': 32
+    'id_interval': 16
 }
 
-print("Generating ID List.. \n", end='', flush=True)
+print("Generating ID Lists.. \n", end='', flush=True)
 training_ID_list, validation_ID_list = multi_ID_list_generation(params['meta_file'], params['input_shape'][0], workers=params['nb_workers'])
+print("Done.")
+
+print("Shuffling ID Lists.. ", end='', flush=True)
 random.shuffle(training_ID_list)
 random.shuffle(validation_ID_list)
-print("Done.")
+print("Done")
 
 '''
 print("Creating Data Generators.. ", end='')

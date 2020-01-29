@@ -3,13 +3,12 @@ import keras
 
 # Data Generator for handling our converted MIDI files
 class DataGenerator(keras.utils.Sequence):
-    def __init__(self, dim, ID_list, token_dict, batch_size=32, seq_size=200, shuffle=True):
+    def __init__(self, dim, ID_list, batch_size=32, shuffle=True):
         self.dim = dim
         self.batch_size = batch_size
         self.shuffle = shuffle
-        self.seq_size = seq_size
+        self.seq_size = dim[0]
         self.ID_list = ID_list
-        self.token_dict = token_dict
         self.on_epoch_end()
 
     def __len__(self):
@@ -35,21 +34,15 @@ class DataGenerator(keras.utils.Sequence):
 
     # Load the data from file and memory map it
     def __data_generation(self, _ID_list):
-        X = np.zeros((len(_ID_list), self.seq_size))
-        Y = np.zeros((len(_ID_list), self.dim))
+        X = np.zeros((len(_ID_list), self.dim))
+        Y = np.zeros((len(_ID_list), self.dim[1]))
 
         for i, ID in enumerate(_ID_list):
             file_name = ID[0]
             start = ID[1]
             
             midi_vectors = np.load(file_name, mmap_mode='r') 
-            #print(midi_vectors.shape)
-            X[i, :] = np.array([self.token_dict[x] if x in self.token_dict else 0 for x in midi_vectors[start:start+self.seq_size]]) # Convert from token ids to argmax tokens
-            #Y[i, :] = midi_vectors[start+self.seq_size, :] # Convert from token ids to argmax then to one hot
-            try:
-                Y[i, self.token_dict[midi_vectors[start+self.seq_size]] if midi_vectors[start+self.seq_size] in self.token_dict else 0] = 1.0
-            except:
-                print(f"start={start}, seq_size={self.seq_size}")
-                raise
+            X[i, :] = midi_vectors[start:start+self.seq_size] # Convert from token ids to argmax tokens
+            Y[i, :] = midi_vectors[start+self.seq_size]
 
         return X, Y
