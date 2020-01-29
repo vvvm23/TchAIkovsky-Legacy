@@ -29,9 +29,9 @@ def multi_ID_list_generation(meta_file, seq_size, workers=8):
         worker_id = arg[1]
         for pair in fl_pairs:
             if pair[2] == "train":
-                worker_output_training[worker_id] = worker_output_training[worker_id] + [(pair[0], i) for i in range(pair[1] - seq_size)]
+                worker_output_training[worker_id] = worker_output_training[worker_id] + [(pair[0], i) for i in range(0, pair[1] - seq_size, params['id_interval'])]
             if pair[2] == "validation":
-                worker_output_validation[worker_id] = worker_output_validation[worker_id] + [(pair[0], i) for i in range(pair[1] - seq_size)]
+                worker_output_validation[worker_id] = worker_output_validation[worker_id] + [(pair[0], i) for i in range(0, pair[1] - seq_size, params['id_interval'])]
             
             pbar.update(1)
 
@@ -58,7 +58,8 @@ params = {
     'model_path': "./models",
     'epochs': 20,
     'nb_workers': 16,
-    'seq_len': 200
+    'seq_len': 200,
+    'id_interval': 32
 }
 
 print("Generating ID List.. \n", end='', flush=True)
