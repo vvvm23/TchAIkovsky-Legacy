@@ -28,12 +28,58 @@ class MusicGenerator:
         midi_vectors = np.load(start_path)
         return midi_vectors[:start_length, :]
 
-
     def _query_model(self, gen_len):
         pass
 
-    def _seq_to_midi(self):
-        pass
+    def _seq_to_midi(self, seq):
+        TRACK = "2, "
+        NOTE_STUB = ", Note_on_c, 0, " # TRACK TIME NOTE_STUB NOTE_VAL VELOCITY
+        
+        # Begin by creating Header data
+        midi_commands = [
+            "0, 0, Header, 1, 2, 480",
+            "1, 0, Start_track",
+            "1, 0, Tempo, 500000",
+            "1, 0, Time_signature, 4, 2, 24, 8",
+            "1, 1, End_track",
+            "2, 0, Start_track"
+        ]
+
+        MIN_NOTE = 21
+        MAX_NOTE = 108
+        MAX_TIME = 1000
+        TIME_INTERVAL = 8
+        MIN_VEL = 16
+        MAX_VEl = 128
+        VEL_INTERVAL = 8
+
+        NB_NOTES = MAX_NOTE - MIN_NOTE + 1
+        NB_TIME = MAX_TIME // TIME_INTERVAL + 1
+        NB_VEL = (MAX_VEL - MIN_VEL) // VEL_INTERVAL + 1
+
+        ON_START = 0
+        OFF_START = NB_NOTES
+        TIME_START = 2*NB_NOTES
+        VEL_START = 2*NB_NOTES + NB_TIME
+
+        current_time = 0
+        current_velocity = 0
+
+        for event in seq:
+            if event < OFF_START: # Is ON event
+                relative_note = event + MIN_NOTE
+                midi_commands.append(f"{TRACK}{current_time}{NOTE_STUB}{relative_note}, {current_velocity}")
+            elif event < TIME_START: # Is OFF event
+                relative_note = event - OFF_START + MIN_NOTE
+                midi_commands.append(f"{TRACK}{current_time}{NOTE_STUB}{relative_note}, 0")
+            elif event < VEL_START: # Is TIME event
+                pass
+            else: # Is VEL event
+                pass
+
+        midi_commands.append(f"{TRACK}{current_time+1}, End_track")
+        midi_commands.append(f"0, 0, End_of_file")
+        return midi_commands
 
     def _save_to_csv(self, csv_data, save_path):
         f = open(save_path, mode='w')
