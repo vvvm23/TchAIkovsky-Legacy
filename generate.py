@@ -1,5 +1,5 @@
-#import keras
-#from keras.models import load_model
+import keras
+from keras.models import load_model
 
 import numpy as np
 from time import time
@@ -7,6 +7,8 @@ from tqdm import tqdm
 
 import argparse
 
+import time
+import os
 '''
     1) Load model from file
     2) Load starting music (or generate random?)
@@ -32,7 +34,7 @@ class MusicGenerator:
     def _query_model(self, gen_len, start_data):
         output = []
         for i in range(gen_len):
-            next_step = self.model.predict(start_data.reshape(1, start_data.shape), batch_size=1)
+            next_step = self.model.predict(np.reshape(start_data, (1, *start_data.shape)), batch_size=1)
             next_int = np.argmax(next_step)
             output.append(next_int)
             start_data = np.concatenate((start_data[1:, :], np.zeros((1, 317))), axis=0)
@@ -58,7 +60,7 @@ class MusicGenerator:
         MAX_TIME = 1000
         TIME_INTERVAL = 8
         MIN_VEL = 16
-        MAX_VEl = 128
+        MAX_VEL = 128
         VEL_INTERVAL = 8
 
         NB_NOTES = MAX_NOTE - MIN_NOTE + 1
@@ -88,7 +90,7 @@ class MusicGenerator:
 
         midi_commands.append(f"{TRACK}{current_time+1}, End_track")
         midi_commands.append(f"0, 0, End_of_file")
-        return midi_commands
+        return [x + '\n' for x in midi_commands]
 
     def _save_to_csv(self, csv_data, save_path):
         f = open(save_path, mode='w')
@@ -103,24 +105,24 @@ class MusicGenerator:
         print("Starting Generation..")
 
         print("Loading start data.. ", end='', flush=True)
-        start_data = _load_starter(start_data, start_data_len)
+        start_data = self._load_starter(start_data, start_data_len)
         print("Done.")
 
         print("Querying model.. ", end='', flush=True)
-        seq = _query_model(gen_len, start_data)
+        seq = self._query_model(gen_len, start_data)
         print("Done.")
 
         print("Translation to MIDI commands.. ", end='', flush=True)
-        midi_commands = _seq_to_midi(seq)
+        midi_commands = self._seq_to_midi(seq)
         print("Done.")
 
         save_id = f"{int(time.time())}"
         print("Saving to csv file.. ", end='', flush=True)
-        _save_to_csv(midi_commands, f"music/{save_id}.csv")
+        self._save_to_csv(midi_commands, f"music/{save_id}.csv")
         print("Done.")
 
         print("Converting to MIDI.. ", end='', flush=True)
-        _convert_csv_file(f"music/{save_id}.csv", f"music/{save_id}.midi")
+        self._convert_csv_file(f"music/{save_id}.csv", f"music/{save_id}.midi")
         print("Done.")
         print(f"Music file {save_id}.midi has been generated.")
 
