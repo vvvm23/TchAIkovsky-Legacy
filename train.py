@@ -20,6 +20,8 @@ import concurrent.futures
  
 import pickle
 
+import argparse
+
 def multi_ID_list_generation(meta_file, seq_size, workers=8):
     worker_output_training = [[] for _ in range(workers)]
     worker_output_validation = [[] for _ in range(workers)]
@@ -58,9 +60,13 @@ params = {
     'model_path': "./models",
     'epochs': 10,
     'nb_workers': 16,
-    'seq_len': 400,
+    'seq_len': 200,
     'id_interval': 32 
 }
+
+parser = argparse.ArgumentParser("Train a model on preprocessed training data")
+parser.add_argument("--model_path", type=str, help="If specified, load model from file and continue training from there.", default=None)
+args = parser.parse_args()
 
 print("Generating ID Lists.. \n", end='', flush=True)
 training_ID_list, validation_ID_list = multi_ID_list_generation(params['meta_file'], params['seq_len'], workers=params['nb_workers'])
@@ -77,9 +83,14 @@ validation_generator = DataGenerator(317, params['seq_len'], validation_ID_list,
 print("Done.")
 print(f"{len(training_ID_list)} samples of training.\n{len(validation_ID_list)} samples for validation.")
 
-print("Creating Model.. ", end='')
-model = create_model(params['seq_len'])
-print("Done.")
+if args.model_path:
+    print(f"Loading Model from '{args.model_path}'.. ", end='')
+    model = keras.models.load_model(args.model_path)
+    print("Done.")
+else:
+    print("Creating Model.. ", end='')
+    model = create_model(params['seq_len'])
+    print("Done.")
 
 print("Creating Optimiser.. ", end='')
 opt = Adam(lr=params['alpha'])
