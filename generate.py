@@ -1,5 +1,6 @@
-import keras
-from keras.models import load_model
+#import keras
+#from keras.models import load_model
+import tensorflow as tf
 
 import numpy as np
 from time import time
@@ -24,7 +25,7 @@ import os
 
 class MusicGenerator:
     def __init__(self, model_path, csvmidi_path):
-        self.model = load_model(model_path)
+        self.model = tf.keras.models.load_model(model_path)
         self.csvmidi_path = csvmidi_path
 
     def _load_starter(self, start_path, start_length):

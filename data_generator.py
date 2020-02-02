@@ -1,8 +1,9 @@
 import numpy as np
-import keras
+#import keras
+import tensorflow as tf
 
 # Data Generator for handling our converted MIDI files
-class DataGenerator(keras.utils.Sequence):
+class DataGenerator(tf.keras.utils.Sequence):
     def __init__(self, dim, seq_size, ID_list, batch_size=32, shuffle=True):
         self.dim = dim
         self.batch_size = batch_size

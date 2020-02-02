@@ -1,9 +1,9 @@
 import os
+import tensorflow as tf
+#import keras
 
-import keras
-
-from keras.optimizers import Adam
-from keras.callbacks import ModelCheckpoint
+#from keras.optimizers import Adam
+#from keras.callbacks import ModelCheckpoint
 
 from data_generator import DataGenerator
 from model import create_model
@@ -85,7 +85,7 @@ print(f"{len(training_ID_list)} samples of training.\n{len(validation_ID_list)} 
 
 if args.model_path:
     print(f"Loading Model from '{args.model_path}'.. ", end='')
-    model = keras.models.load_model(args.model_path)
+    model = tf.keras.models.load_model(args.model_path)
     print("Done.")
 else:
     print("Creating Model.. ", end='')
@@ -93,17 +93,23 @@ else:
     print("Done.")
 
 print("Creating Optimiser.. ", end='')
-opt = Adam(lr=params['alpha'])
+opt = tf.keras.optimizers.Adam(lr=params['alpha'])
 print("Done.")
 
 print("Compiling Model.. ", end='')
 model.compile(opt, loss='categorical_crossentropy', metrics=['accuracy'])
 print("Done.")
 
+model.summary()
+
 # Start training
 start_time = int(time.time())
-mdl_check = ModelCheckpoint(f"{params['model_path']}/tchAIkovsky-" + str(start_time) + "-{epoch:02d}.h5")
+mdl_check = tf.keras.callbacks.ModelCheckpoint(f"{params['model_path']}/tchAIkovsky-" + str(start_time) + "-{epoch:02d}.h5")
 model.fit_generator(generator=training_generator, validation_data=validation_generator,
                     epochs=params['epochs'], steps_per_epoch=len(training_ID_list) // params['batch_size'],
                     use_multiprocessing=False, workers=params['nb_workers'],
                     callbacks=[mdl_check])
+                    
+print("Saving final model to file.. ", end='', flush=True)
+model.save(f"{params['model_path']}/tchAIkovsky-" + str(start_time) + "-final.h5")
+print("Done.")
