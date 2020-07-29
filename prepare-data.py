@@ -80,10 +80,11 @@ def csv_to_list(path):
     return seq
 
 def list_to_np(seq):
-    n = len(seq)
-    out = np.zeros((n, 2*NB_NOTES+NB_TIME+NB_VEL))
-    out[np.arange(n), seq] = 1.0
-    return out
+    return np.array(seq, dtype=np.int)
+    # n = len(seq)
+    # out = np.zeros((n, 2*NB_NOTES+NB_TIME+NB_VEL), dtype=np.int)
+    # out[np.arange(n), seq] = 1
+    # return out
 
 if __name__ == '__main__':
     NOTE_MAX = 108
