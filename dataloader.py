@@ -31,15 +31,30 @@ class MusicDataset(torch.utils.data.Dataset):
         return len(self.index_lookup)
 
     def __getitem__(self, idx):
-        if torch.is_tensor(idx):
-            idx = idx.tolist()
+        # idx_len = 1
+        # if torch.is_tensor(idx):
+            # idx = idx.tolist()
 
-        idx_len = len(idx)
-        out = np.zeros((idx_len, SAMPLE_LENGTH))
-    
-        for ei, i in enumerate(idx):
-            file_id, loc = self.index_lookup[i] # (file_id, location)
-            seq = self.music_sequences[file_id][loc:loc+SAMPLE_LENGTH]
-            out[ei, :] = seq
+        # if isinstance(idx, list):
+            # idx_len = len(idx)
+        # else:
+            # idx = [idx]
 
-        return out
+        # out = np.zeros((idx_len, SAMPLE_LENGTH))
+        # target = np.zeros((idx_len, 333))
+
+        out = np.zeros((SAMPLE_LENGTH))
+        target = np.zeros((333))
+
+        # for ei, i in enumerate(idx):
+            # file_id, loc = self.index_lookup[i] # (file_id, location)
+            # seq = self.music_sequences[file_id][loc:loc+SAMPLE_LENGTH+1]
+            # out[ei, :] = seq[:SAMPLE_LENGTH]
+            # target[ei, seq[SAMPLE_LENGTH]] = 1.0
+
+        file_id, loc = self.index_lookup[idx]
+        seq = self.music_sequences[file_id][loc:loc+SAMPLE_LENGTH+1]
+        out[:] = seq[:SAMPLE_LENGTH]
+        target[:] = seq[SAMPLE_LENGTH]
+
+        return (out, target)

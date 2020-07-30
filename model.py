@@ -4,12 +4,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-device = torch.cuda.device('cuda' if torch.cuda.is_available() else 'cpu')
+# device = torch.cuda.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 class TransformerModel(nn.Module):
-    def __init__(self, nb_out, nb_in, nb_heads, nb_hidden, nb_layers, dropout=0.3):
+    def __init__(self, nb_out, nb_in, nb_heads, nb_hidden, nb_layers, dropout=0.3, device=torch.cuda.device('cuda' if torch.cuda.is_available else 'cpu')):
         super(TransformerModel, self).__init__()
         
+        self.device = device
+
         self.nb_in = nb_in
 
         self.model_type = 'Transformer'
@@ -40,7 +42,8 @@ class TransformerModel(nn.Module):
 
     def forward(self, x):
         if self.src_mask is None or self.src_mask.size(0) != len(x):
-            mask = self._generate_mask(len(x)).to(device)
+            # mask = self._generate_mask(len(x)).to(self.device)
+            mask = self._generate_mask(len(x))
             self.src_mask = mask
 
         x = self.embedding(x) * math.sqrt(self.nb_in)
@@ -66,5 +69,3 @@ class PositionalEncoding(nn.Module):
     def forward(self, x):
         x = x + self.pe[:x.size(0), :]
         return self.dropout(x)
-
-x = TransformerModel(128, 128, 8, 256, 6)
