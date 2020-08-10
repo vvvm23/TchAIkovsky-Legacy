@@ -11,47 +11,45 @@ class TransformerModel(nn.Module):
         super(TransformerModel, self).__init__()
         
         self.device = device
-
         self.nb_in = nb_in
-
-        self.model_type = 'Transformer'
         self.src_mask = None
+
         self.position_encoder = PositionalEncoding(nb_in, dropout=dropout)
         self.embedding = nn.Embedding(nb_out, nb_in)
 
         encoder_layers = nn.TransformerEncoderLayer(nb_in, nb_heads, nb_hidden, dropout)
         self.trans_encoder = nn.TransformerEncoder(encoder_layers, nb_layers)
 
-        decoder_layers = nn.TransformerDecoderLayer(nb_in, nb_heads, nb_hidden, dropout)
-        self.trans_decoder = nn.TransformerDecoder(decoder_layers, nb_layers)
-
-        self.dense = nn.Linear(nb_in, nb_out)
+        self.decoder = nn.Linear(nb_in, nb_out)
 
         self.init_weights()
 
     def init_weights(self):
-        init_range = 0.2
-        self.embedding.weight.data.uniform_(-init_range, init_range)
-        self.dense.weight.data.uniform_(-init_range, init_range)
-        self.dense.bias.data.zero_()
+        init_range = 0.1
+        nn.init.uniform_(self.embedding.weight, -init_range, init_range)
+        nn.init.zeros_(self.decoder.bias)
+        nn.init.uniform_(self.decoder.weight, -init_range, init_range)
 
     def _generate_mask(self, sz):
         mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
         mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
         return mask
 
-    def forward(self, x):
-        if self.src_mask is None or self.src_mask.size(0) != len(x):
-            # mask = self._generate_mask(len(x)).to(self.device)
-            mask = self._generate_mask(len(x))
-            self.src_mask = mask
-
+    def forward(self, x, mask=True):
+        if mask:
+            if self.src_mask is None or self.src_mask.size(0) != len(x):
+                # mask = self._generate_mask(len(x)).to(self.device)
+                mask = self._generate_mask(len(x)).to(self.device)
+                self.src_mask = mask
+        else:
+            self.src_mask = None
+        
         x = self.embedding(x) * math.sqrt(self.nb_in)
         x = self.position_encoder(x)
-        x = self.trans_encoder(x, self.mask)
-        x = self.trans_decoder(x, self.mask)
-        out = self.dense(x)
-        return out
+        x = self.trans_encoder(x, self.src_mask)
+        out = self.decoder(x)
+
+        return F.log_softmax(out, dim=-1)
 
 class PositionalEncoding(nn.Module):
     def __init__(self, nb_in, dropout=0.1, max_length=5000):

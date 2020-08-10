@@ -80,7 +80,7 @@ def csv_to_list(path):
     return seq
 
 def list_to_np(seq):
-    return np.array(seq, dtype=np.uint8)
+    return np.array(seq, dtype=np.int16)
     # n = len(seq)
     # out = np.zeros((n, 2*NB_NOTES+NB_TIME+NB_VEL), dtype=np.int)
     # out[np.arange(n), seq] = 1
