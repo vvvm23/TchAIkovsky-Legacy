@@ -2,7 +2,7 @@ import torch
 import numpy as np
 import glob
 
-INTERVAL = 16
+INTERVAL = 64
 SAMPLE_LENGTH = 256
 
 class MusicDataset(torch.utils.data.Dataset):
@@ -16,7 +16,7 @@ class MusicDataset(torch.utils.data.Dataset):
 
     def _generate_ids(self):
         INTERVAL = 64
-        npy_files = glob.glob(f"{self.root_dir}/*.npy")
+        npy_files = glob.glob(f"{self.root_dir}/*.npy")[:10]
         self.index_lookup = {}
         sample_count = 0
 
@@ -45,7 +45,7 @@ class MusicDataset(torch.utils.data.Dataset):
         # target = np.zeros((idx_len, 333))
 
         out = torch.zeros(SAMPLE_LENGTH)
-        target = torch.zeros(333)
+        target = torch.zeros(1)
 
         # for ei, i in enumerate(idx):
             # file_id, loc = self.index_lookup[i] # (file_id, location)
@@ -56,6 +56,7 @@ class MusicDataset(torch.utils.data.Dataset):
         file_id, loc = self.index_lookup[idx]
         seq = self.music_sequences[file_id][loc:loc+SAMPLE_LENGTH+1]
         out[:] = seq[:SAMPLE_LENGTH]
-        target[seq[SAMPLE_LENGTH]] = 1.0
+        target = seq[SAMPLE_LENGTH]
+        # target[seq[SAMPLE_LENGTH]] = 1.0
 
         return (out, target)
