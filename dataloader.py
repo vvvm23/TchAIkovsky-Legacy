@@ -16,7 +16,7 @@ class MusicDataset(torch.utils.data.Dataset):
 
     def _generate_ids(self):
         INTERVAL = 64
-        npy_files = glob.glob(f"{self.root_dir}/*.npy")[:10]
+        npy_files = glob.glob(f"{self.root_dir}/*.npy")
         self.index_lookup = {}
         sample_count = 0
 

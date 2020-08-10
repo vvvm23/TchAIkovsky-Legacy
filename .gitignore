@@ -1,3 +1,5 @@
 np_out/
 csv_out/
-
+samples/
+csvmidi
+*.midi

@@ -9,19 +9,20 @@ import random
 
 import model
 import dataloader
+import midigen
 
 import math
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-NB_EPOCHS = 200
-PRINT_INV = 32
+NB_EPOCHS = 50
+PRINT_INV = 64
 
 def train(model, dataloader):
     nb_batches = len(dataloader) 
 
     crit = nn.NLLLoss()
-    optim = torch.optim.Adam(model.parameters(), lr=0.001)
+    optim = torch.optim.Adam(model.parameters(), lr=0.0001)
 
     model.train()
     t_loss = 0.0
@@ -54,13 +55,17 @@ def train(model, dataloader):
                 print(f"Loss: {total_loss / PRINT_INV}\n")
                 total_loss = 0.0
 
-def generate(model):
+        generate(model, f"{ei}-sample.csv", primer=test_primer)
+
+def generate(model, name, primer=None):
     model.eval()
     primer_length = 256
     sample_length = 1024
     sample = []
-    primer = torch.tensor([random.randint(0, 332) for _ in range(primer_length)]).to(device)
-    primer = primer.view(1, -1)
+
+    if primer == None:
+        primer = torch.tensor([random.randint(0, 332) for _ in range(primer_length)]).to(device)
+        primer = primer.view(1, -1)
 
     for i in range(sample_length): 
         out = model(primer)
@@ -68,7 +73,7 @@ def generate(model):
         sample.append(int(out))
         primer = torch.cat([primer[:, 1:], torch.reshape(out, (1, 1))], dim=1)
 
-    # TODO: pass sample to midi generator
+    midigen.generate_from_seq(sample, f"samples/{name}")
 
     model.train()
     
@@ -81,9 +86,9 @@ if __name__ == '__main__':
     # )
     
     y = dataloader.MusicDataset("./np_out", device=device)
-
+    test_primer = y.__getitem__(1234)[0].type(torch.LongTensor).view(1, -1).to(device)
     dataloader = torch.utils.data.DataLoader(y, batch_size=32, shuffle=True, num_workers=0)
 
     print(torch.cuda.is_available())
-    generate(transformer)
-    # train(transformer, dataloader)
+    # generate(transformer)
+    train(transformer, dataloader)
