@@ -25,7 +25,7 @@ class MusicDataset(torch.utils.data.Dataset):
             seq_len = seq.shape[0]
 
             self.music_sequences[file_id] = torch.from_numpy(seq).to(self.device)
-            self.index_lookup.update({sample_count+i: (file_id, i*INTERVAL) for i in range((seq_len - SAMPLE_LENGTH) // INTERVAL) })
+            self.index_lookup.update({sample_count+i: (file_id, i*INTERVAL) for i in range((seq_len - 2*SAMPLE_LENGTH) // INTERVAL) })
             sample_count += (seq_len - SAMPLE_LENGTH) // INTERVAL
             break
             
@@ -55,9 +55,13 @@ class MusicDataset(torch.utils.data.Dataset):
             # target[ei, seq[SAMPLE_LENGTH]] = 1.0
 
         file_id, loc = self.index_lookup[idx]
-        seq = self.music_sequences[file_id][loc:loc+SAMPLE_LENGTH+1]
+        # seq = self.music_sequences[file_id][loc:loc+SAMPLE_LENGTH+1]
+        # out[:] = seq[:SAMPLE_LENGTH]
+        # target = seq[1:1+SAMPLE_LENGTH].view(-1)
+
+        seq = self.music_sequences[file_id][loc:loc+SAMPLE_LENGTH*2]
         out[:] = seq[:SAMPLE_LENGTH]
-        target = seq[1:1+SAMPLE_LENGTH].view(-1)
+        target = seq[SAMPLE_LENGTH:2*SAMPLE_LENGTH].view(-1)
 
         # target[seq[SAMPLE_LENGTH]] = 1.0
 
