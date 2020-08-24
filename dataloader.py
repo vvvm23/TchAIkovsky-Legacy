@@ -21,6 +21,9 @@ class MusicDataset(torch.utils.data.Dataset):
         sample_count = 0
 
         for file_id, path in enumerate(npy_files):
+            # TODO: remove this
+            if file_id in [0, 1]:
+                continue
             seq = np.load(path)
             seq_len = seq.shape[0]
 
