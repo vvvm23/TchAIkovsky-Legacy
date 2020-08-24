@@ -14,8 +14,8 @@ import midigen
 import math
 
 TRY_CUDA = True
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-print(f"> Device: {device} ({'CUDA is enabled' if TRY_CUDA and torch.cuda.is_available() else 'CUDA not available'}) \n")
+# device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+# print(f"> Device: {device} ({'CUDA is enabled' if TRY_CUDA and torch.cuda.is_available() else 'CUDA not available'}) \n")
 
 NB_EPOCHS = 1000
 PRINT_INV = 64
@@ -65,54 +65,46 @@ def generate(model, name, primer=None):
     primer_length = 512
 
     EOS_TOKEN = 334
-    # sample_length = 1024
+    MAX_LENGTH = 5000
 
     if primer == None:
         primer = torch.tensor([random.randint(0, 332) for _ in range(primer_length)]).to(device)
         primer = primer.view(1, -1)
     
     primer = primer.type(torch.LongTensor).to(device)
-    sample = primer.reshape(primer_length).tolist()
+    # sample = primer.reshape(primer_length).tolist()
+    sample = []
 
     print("> Generating Sample.")
-    while EOS_TOKEN not in sample and len(sample) < 2000:
+    while len(sample) < MAX_LENGTH:
         print(f"> Sample Length: {len(sample)}")
         out = model(primer)
         out = torch.argmax(out, dim=-1)
         sample = sample + out.reshape(primer_length).tolist()
+
+        if EOS_TOKEN in out.reshape(primer_length).tolist():
+            break
+
         primer = out
-
-    # out = model(primer)
-    # out = torch.argmax(out, dim=-1)
-    # sample = sample + out.reshape(primer_length).tolist()
-    # primer = out
-
-    # out = model(primer)
-    # out = torch.argmax(out, dim=-1)
-    # sample = sample + out.reshape(primer_length).tolist()
-    # primer = out
-
-    # out = model(primer)
-    # out = torch.argmax(out, dim=-1)
-    # sample = sample + out.reshape(primer_length).tolist()
-    # primer = out
-
-    # out = model(primer)
-    # out = torch.argmax(out, dim=-1)
-    # sample = sample + out.reshape(primer_length).tolist()
 
     midigen.generate_from_seq(sample, f"samples/{name}")
 
     model.train()
     
 if __name__ == '__main__':
-    transformer = model.TransformerModel(335, 128, 8, 512, 6, device=device).to(device)
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    print(f"> Device: {device} ({'CUDA is enabled' if TRY_CUDA and torch.cuda.is_available() else 'CUDA not available'}) \n")
+
+    print("> Using Tensorflow Magenta MIDI Dataset\n")
+    y = dataloader.MusicDataset("./np_out")
+    test_primer = y.__getitem__(0)[0].type(torch.LongTensor).view(1, -1)
+    dataloader = torch.utils.data.DataLoader(y, batch_size=16, shuffle=True, num_workers=8)
+
+    transformer = model.TransformerModel(335, 256, 8, 512, 6, device=device).to(device)
     print("> Model Summary:")
     print(transformer, '\n')
-    
-    print("> Using Tensorflow Magenta MIDI Dataset\n")
-    y = dataloader.MusicDataset("./np_out", device=device)
-    test_primer = y.__getitem__(0)[0].type(torch.LongTensor).view(1, -1).to(device)
-    dataloader = torch.utils.data.DataLoader(y, batch_size=16, shuffle=True, num_workers=0)
+
+    # model = torch.load("models/1598287965-model.pt")
+    # generate(model, "load-test")
 
     train(transformer, dataloader)
