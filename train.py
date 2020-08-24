@@ -17,7 +17,7 @@ TRY_CUDA = True
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 print(f"> Device: {device} ({'CUDA is enabled' if TRY_CUDA and torch.cuda.is_available() else 'CUDA not available'}) \n")
 
-NB_EPOCHS = 500
+NB_EPOCHS = 1000
 PRINT_INV = 64
 
 def train(model, dataloader):
@@ -57,54 +57,56 @@ def train(model, dataloader):
                 print(f"Loss: {total_loss / PRINT_INV}\n")
                 total_loss = 0.0
 
-    generate(model, f"{ei}-sample.csv", primer=test_primer)
     torch.save(model, f"models/{int(time.time())}-model.pt")
+    generate(model, f"{ei}-sample.csv", primer=test_primer)
 
 def generate(model, name, primer=None):
     model.eval()
     primer_length = 512
+
+    EOS_TOKEN = 334
     # sample_length = 1024
-    sample = []
 
     if primer == None:
         primer = torch.tensor([random.randint(0, 332) for _ in range(primer_length)]).to(device)
         primer = primer.view(1, -1)
     
     primer = primer.type(torch.LongTensor).to(device)
+    sample = primer.reshape(primer_length).tolist()
 
-    # for i in range(sample_length): 
-        # out = model(primer)
-        # out = torch.argmax(out)
-        # sample.append(int(out))
-        # primer = torch.cat([primer[:, 1:], torch.reshape(out, (1, 1))], dim=1)
+    print("> Generating Sample.")
+    while EOS_TOKEN not in sample and len(sample) < 2000:
+        print(f"> Sample Length: {len(sample)}")
+        out = model(primer)
+        out = torch.argmax(out, dim=-1)
+        sample = sample + out.reshape(primer_length).tolist()
+        primer = out
 
-    # midigen.generate_from_seq(sample, f"samples/{name}")
+    # out = model(primer)
+    # out = torch.argmax(out, dim=-1)
+    # sample = sample + out.reshape(primer_length).tolist()
+    # primer = out
 
-    out = model(primer)
-    out = torch.argmax(out, dim=-1)
-    sample = sample + out.reshape(primer_length).tolist()
-    primer = out
+    # out = model(primer)
+    # out = torch.argmax(out, dim=-1)
+    # sample = sample + out.reshape(primer_length).tolist()
+    # primer = out
 
-    out = model(primer)
-    out = torch.argmax(out, dim=-1)
-    sample = sample + out.reshape(primer_length).tolist()
-    primer = out
+    # out = model(primer)
+    # out = torch.argmax(out, dim=-1)
+    # sample = sample + out.reshape(primer_length).tolist()
+    # primer = out
 
-    out = model(primer)
-    out = torch.argmax(out, dim=-1)
-    sample = sample + out.reshape(primer_length).tolist()
-    primer = out
-
-    out = model(primer)
-    out = torch.argmax(out, dim=-1)
-    sample = sample + out.reshape(primer_length).tolist()
+    # out = model(primer)
+    # out = torch.argmax(out, dim=-1)
+    # sample = sample + out.reshape(primer_length).tolist()
 
     midigen.generate_from_seq(sample, f"samples/{name}")
 
     model.train()
     
 if __name__ == '__main__':
-    transformer = model.TransformerModel(333, 128, 8, 512, 6, device=device).to(device)
+    transformer = model.TransformerModel(335, 128, 8, 512, 6, device=device).to(device)
     print("> Model Summary:")
     print(transformer, '\n')
     

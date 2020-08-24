@@ -8,7 +8,7 @@ def floorN(num, divisor):
 
 def csv_to_list(path):
     f = open(path, mode='r')
-    seq = []
+    seq = [SOS_INDEX]
     
     lines = f.readlines()
     c_time = 0
@@ -75,16 +75,12 @@ def csv_to_list(path):
                 c_vel = q_vel
 
             seq.append(ON_INDEX + note_val)
-
+    seq.append(EOS_INDEX)
     f.close()
     return seq
 
 def list_to_np(seq):
     return np.array(seq, dtype=np.int16)
-    # n = len(seq)
-    # out = np.zeros((n, 2*NB_NOTES+NB_TIME+NB_VEL), dtype=np.int)
-    # out[np.arange(n), seq] = 1
-    # return out
 
 if __name__ == '__main__':
     NOTE_MAX = 108
@@ -105,6 +101,11 @@ if __name__ == '__main__':
     TIME_INDEX = OFF_INDEX + NB_NOTES
     VEL_INDEX = TIME_INDEX + NB_TIME
     
+    SOS_INDEX = VEL_INDEX + NB_VEL
+    EOS_INDEX = SOS_INDEX + 1
+
+    print(EOS_INDEX)
+
     csv_files = glob.glob("./csv_out/*.csv")
 
     # use i to give unique output names
