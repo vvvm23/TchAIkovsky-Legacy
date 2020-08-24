@@ -4,10 +4,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-# device = torch.cuda.device('cuda' if torch.cuda.is_available() else 'cpu')
-
 class TransformerModel(nn.Module):
-    def __init__(self, nb_out, nb_in, nb_heads, nb_hidden, nb_layers, dropout=0.3, device=torch.cuda.device('cuda' if torch.cuda.is_available else 'cpu')):
+    def __init__(self, nb_out, nb_in, nb_heads, nb_hidden, nb_layers, dropout=0.1, device=torch.cuda.device('cuda:0' if torch.cuda.is_available else 'cpu')):
         super(TransformerModel, self).__init__()
         
         self.device = device
@@ -20,38 +18,32 @@ class TransformerModel(nn.Module):
         encoder_layers = nn.TransformerEncoderLayer(nb_in, nb_heads, nb_hidden, dropout)
         self.trans_encoder = nn.TransformerEncoder(encoder_layers, nb_layers)
 
-        self.decoder = nn.Linear(nb_in*256, nb_out)
-
-        self.init_weights()
-
-    def init_weights(self):
-        init_range = 0.1
-        nn.init.uniform_(self.embedding.weight, -init_range, init_range)
-        nn.init.zeros_(self.decoder.bias)
-        nn.init.uniform_(self.decoder.weight, -init_range, init_range)
+        self.decoder = nn.Linear(nb_in, nb_out)
 
     def _generate_mask(self, sz):
         mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
         mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
-        return mask
+        return mask.to(self.device)
 
     def forward(self, x, mask=True):
         if mask:
             if self.src_mask is None or self.src_mask.size(0) != len(x):
-                # mask = self._generate_mask(len(x)).to(self.device)
-                mask = self._generate_mask(len(x)).to(self.device)
+                mask = self._generate_mask(x.shape[1])
                 self.src_mask = mask
         else:
             self.src_mask = None
         
         x = self.embedding(x) * math.sqrt(self.nb_in)
         x = self.position_encoder(x)
+        x = x.transpose(0, 1)
         x = self.trans_encoder(x, self.src_mask)
-        x = x.view(x.shape[0], -1)
-        out = self.decoder(x)
-        # print(out.shape)
+        x = x.transpose(1, 0)
 
-        return F.log_softmax(out, dim=-1)
+        out = self.decoder(x)
+    
+        out = F.log_softmax(out, dim=-1)
+
+        return out
 
 class PositionalEncoding(nn.Module):
     def __init__(self, nb_in, dropout=0.1, max_length=5000):

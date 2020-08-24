@@ -3,7 +3,7 @@ import numpy as np
 import glob
 
 INTERVAL = 64
-SAMPLE_LENGTH = 256
+SAMPLE_LENGTH = 512
 
 class MusicDataset(torch.utils.data.Dataset):
     def __init__(self, root_dir, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')):
@@ -15,7 +15,7 @@ class MusicDataset(torch.utils.data.Dataset):
         self._generate_ids()
 
     def _generate_ids(self):
-        INTERVAL = 64
+        INTERVAL = 256
         npy_files = glob.glob(f"{self.root_dir}/*.npy")
         self.index_lookup = {}
         sample_count = 0
@@ -27,6 +27,7 @@ class MusicDataset(torch.utils.data.Dataset):
             self.music_sequences[file_id] = torch.from_numpy(seq).to(self.device)
             self.index_lookup.update({sample_count+i: (file_id, i*INTERVAL) for i in range((seq_len - SAMPLE_LENGTH) // INTERVAL) })
             sample_count += (seq_len - SAMPLE_LENGTH) // INTERVAL
+            break
             
     def __len__(self):
         return len(self.index_lookup)
@@ -45,7 +46,7 @@ class MusicDataset(torch.utils.data.Dataset):
         # target = np.zeros((idx_len, 333))
 
         out = torch.zeros(SAMPLE_LENGTH)
-        target = torch.zeros(1)
+        target = torch.zeros(SAMPLE_LENGTH)
 
         # for ei, i in enumerate(idx):
             # file_id, loc = self.index_lookup[i] # (file_id, location)
@@ -56,7 +57,8 @@ class MusicDataset(torch.utils.data.Dataset):
         file_id, loc = self.index_lookup[idx]
         seq = self.music_sequences[file_id][loc:loc+SAMPLE_LENGTH+1]
         out[:] = seq[:SAMPLE_LENGTH]
-        target = seq[SAMPLE_LENGTH]
+        target = seq[1:1+SAMPLE_LENGTH].view(-1)
+
         # target[seq[SAMPLE_LENGTH]] = 1.0
 
         return (out, target)

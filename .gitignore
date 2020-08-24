@@ -1,5 +1,7 @@
 np_out/
 csv_out/
 samples/
+models/
+__pycache__/
 csvmidi
 *.midi
