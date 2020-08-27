@@ -17,7 +17,7 @@ TRY_CUDA = True
 # device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 # print(f"> Device: {device} ({'CUDA is enabled' if TRY_CUDA and torch.cuda.is_available() else 'CUDA not available'}) \n")
 
-NB_EPOCHS = 1000
+NB_EPOCHS = 500
 PRINT_INV = 64
 
 def train(model, dataloader):
@@ -25,6 +25,7 @@ def train(model, dataloader):
 
     crit = nn.CrossEntropyLoss()
     optim = torch.optim.Adam(model.parameters(), lr=0.001)
+    # scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=50, gamma=0.1)
 
     model.train()
     t_loss = 0.0
@@ -45,7 +46,9 @@ def train(model, dataloader):
             loss = crit(out, batch_out)
             total_loss += loss.item()
             loss.backward()
+
             optim.step()
+            # scheduler.step()
 
             etime_batch = time.time()
             

@@ -1,4 +1,5 @@
 np_out/
+np_out.bak/
 csv_out/
 samples/
 models/

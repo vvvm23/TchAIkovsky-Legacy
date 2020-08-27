@@ -2,8 +2,8 @@ import torch
 import numpy as np
 import glob
 
-INTERVAL = 256
-SAMPLE_LENGTH = 512
+INTERVAL = 64
+SAMPLE_LENGTH = 128
 
 class MusicDataset(torch.utils.data.Dataset):
     def __init__(self, root_dir):#, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')):
@@ -20,7 +20,7 @@ class MusicDataset(torch.utils.data.Dataset):
         self.index_lookup = {}
         sample_count = 0
 
-        for file_id, path in enumerate(npy_files[48:49]):
+        for file_id, path in enumerate(npy_files[:5]):
             seq = np.load(path)
             seq_len = seq.shape[0]
 
