@@ -6,3 +6,5 @@ models/
 __pycache__/
 csvmidi
 *.midi
+.vim/
+midicsv
