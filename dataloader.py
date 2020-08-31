@@ -2,8 +2,8 @@ import torch
 import numpy as np
 import glob
 
-INTERVAL = 64
-SAMPLE_LENGTH = 128
+INTERVAL = 128
+SAMPLE_LENGTH = 256
 
 class MusicDataset(torch.utils.data.Dataset):
     def __init__(self, root_dir):#, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')):
