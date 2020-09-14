@@ -5,8 +5,47 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class TransformerModel(nn.Module):
-    def __init__(self, nb_out, nb_in, nb_heads, nb_hidden, nb_layers, dropout=0.1, device=torch.cuda.device('cuda:0' if torch.cuda.is_available else 'cpu')):
+    def __init__(self, nb_out, nb_in, nb_emd, nb_heads, nb_hidden, nb_layers, dropout=0.1, device=torch.cuda.device('cuda:0' if torch.cuda.is_available else 'cpu')):
         super(TransformerModel, self).__init__()
+        
+        self.device = device
+        self.nb_in = nb_in
+        self.nb_out = nb_out
+        self.tgt_mask = None
+
+        self.emd_src = nn.Embedding(nb_in, nb_emd)
+        self.emd_tgt = nn.Embedding(nb_out, nb_emd)
+
+        self.pos_src = PositionalEncoding(nb_emd, dropout=dropout)
+        self.pos_tgt = PositionalEncoding(nb_emd, dropout=dropout)
+
+        self.transformer = nn.Transformer(nb_emd, nb_heads, nb_layers, nb_layers, nb_hidden, dropout)
+
+        self.linear = nn.Linear(nb_emd, nb_out)
+
+    def forward(self, src, tgt):
+        if self.tgt_mask == None: 
+            self.tgt_mask = self.transformer.generate_square_subsequent_mask(tgt.shape[1]).to(self.device)
+
+        src = self.emd_src(src) * torch.sqrt(torch.tensor(self.nb_in).float())
+        tgt = self.emd_tgt(tgt) * torch.sqrt(torch.tensor(self.nb_out).float())
+
+        src = self.pos_src(src)
+        tgt = self.pos_tgt(tgt)
+
+        src = src.permute(1, 0, 2)
+        tgt = tgt.permute(1, 0, 2)
+
+        out = self.transformer(src, tgt, tgt_mask=self.tgt_mask)
+
+        out = out.permute(1, 0, 2)
+        out = self.linear(out)
+        out = F.log_softmax(out, dim=-1)
+        return out
+
+class TransformerEncoderModel(nn.Module):
+    def __init__(self, nb_out, nb_in, nb_heads, nb_hidden, nb_layers, dropout=0.1, device=torch.cuda.device('cuda:0' if torch.cuda.is_available else 'cpu')):
+        super(TransformerEncoderModel, self).__init__()
         
         self.device = device
         self.nb_in = nb_in
@@ -33,7 +72,8 @@ class TransformerModel(nn.Module):
         else:
             self.src_mask = None
         
-        x = self.embedding(x) * math.sqrt(self.nb_in)
+        # x = self.embedding(x) * math.sqrt(self.nb_in)
+        x = self.embedding(x) * torch.sqrt(torch.tensor(self.nb_in).float())
         x = self.position_encoder(x)
         x = x.transpose(0, 1)
         x = self.trans_encoder(x, self.src_mask)
@@ -52,7 +92,8 @@ class PositionalEncoding(nn.Module):
 
         pe = torch.zeros(max_length, nb_in)
         position = torch.arange(0, max_length, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, nb_in, 2).float() * (-math.log(10000.0) / nb_in))
+        # div_term = torch.exp(torch.arange(0, nb_in, 2).float() * (-math.log(10000.0) / nb_in))
+        div_term = torch.exp(torch.arange(0, nb_in, 2).float() * (-torch.log(torch.tensor(10000.0)) / nb_in))
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
         pe = pe.unsqueeze(0).transpose(0, 1)
@@ -61,3 +102,8 @@ class PositionalEncoding(nn.Module):
     def forward(self, x):
         x = x + self.pe[:x.size(0), :]
         return self.dropout(x)
+
+if __name__ == '__main__':
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    x = TransformerModel(200, 200, 512, 8, 1024, 6, device=device)
+    print(x)

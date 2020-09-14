@@ -15,10 +15,11 @@ import math
 
 TRY_CUDA = True
 
-NB_EPOCHS = 500
+NB_EPOCHS = 1000
 PRINT_INV = 64
 
 def train(model, dataloader):
+    run_id = int(time.time())
     nb_batches = len(dataloader) 
 
     crit = nn.CrossEntropyLoss()
@@ -26,7 +27,6 @@ def train(model, dataloader):
     # scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=50, gamma=0.1)
 
     model.train()
-    t_loss = 0.0
 
     for ei in range(NB_EPOCHS):
         total_loss = 0.0
@@ -58,7 +58,8 @@ def train(model, dataloader):
                 print(f"> Loss: {total_loss / PRINT_INV}\n")
                 total_loss = 0.0
 
-    torch.save(model, f"models/{int(time.time())}-model.pt")
+        torch.save(model, f"models/{run_id}-{ei}-model.pt")
+    torch.save(model, f"models/{run_id}-final-model.pt")
     generate(model, f"{ei}-sample.csv", primer=test_primer)
 
 def generate(model, name, primer=None):
@@ -66,7 +67,7 @@ def generate(model, name, primer=None):
     primer_length = 256
 
     EOS_TOKEN = 334
-    MAX_LENGTH = 20000
+    MAX_LENGTH = 4000
 
     if primer == None:
         primer = torch.tensor([random.randint(0, 332) for _ in range(primer_length)]).to(device)
@@ -101,11 +102,12 @@ if __name__ == '__main__':
     test_primer = y.__getitem__(0)[0].type(torch.LongTensor).view(1, -1)
     dataloader = torch.utils.data.DataLoader(y, batch_size=64, shuffle=True, num_workers=8)
 
-    transformer = model.TransformerModel(335, 256, 8, 512, 6, device=device).to(device)
+    transformer = model.TransformerEncoderModel(335, 256, 8, 512, 6, device=device).to(device)
     print("> Model Summary:")
     print(transformer, '\n')
 
-    # model = torch.load("models/1598287965-model.pt")
+    # model = torch.load("models/1598893328-6-model.pt")
     # generate(model, "load-test")
 
+    # transformer = torch.load("models/1598887967-model.pt")
     train(transformer, dataloader)
