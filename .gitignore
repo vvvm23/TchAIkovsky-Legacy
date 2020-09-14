@@ -6,5 +6,7 @@ models/
 __pycache__/
 csvmidi
 *.midi
+*.wav
+*.mp3
 .vim/
 midicsv
