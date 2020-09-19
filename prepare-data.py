@@ -3,6 +3,8 @@ import glob
 import numpy as np
 import pandas as pd
 
+from tqdm import tqdm
+
 def floorN(num, divisor):
     return num - (num%divisor)
 
@@ -96,24 +98,22 @@ if __name__ == '__main__':
     VEL_INC = 4
     NB_VEL = (VEL_MAX - VEL_MIN) // VEL_INC + 1
 
-    ON_INDEX = 0
+    PAD_INDEX = 0
+    SOS_INDEX = PAD_INDEX + 1
+    EOS_INDEX = SOS_INDEX + 1
+    ON_INDEX = EOS_INDEX + 1
     OFF_INDEX = ON_INDEX + NB_NOTES
     TIME_INDEX = OFF_INDEX + NB_NOTES
     VEL_INDEX = TIME_INDEX + NB_TIME
     
-    SOS_INDEX = VEL_INDEX + NB_VEL
-    EOS_INDEX = SOS_INDEX + 1
-
-    print(EOS_INDEX)
-
     csv_files = glob.glob("./csv_out/*.csv")
+
+    pb = tqdm(total=len(csv_files))
 
     # use i to give unique output names
     # may not correspond to csv id, but it does not have to
     for i, path in enumerate(csv_files): 
-        print(f"Starting file {i+1}/{len(csv_files)}.. ", end='', flush=True)
         int_list = csv_to_list(path)
         int_npy = list_to_np(int_list)
         np.save(f"./np_out/{i}.npy", int_npy)
-        print("Done.")
-
+        pb.update(1)
