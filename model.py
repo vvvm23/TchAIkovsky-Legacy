@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class TransformerModel(nn.Module):
-    def __init__(self, nb_out, nb_in, nb_emd, nb_heads, nb_hidden, nb_layers, dropout=0.1, device=torch.cuda.device('cuda:0' if torch.cuda.is_available else 'cpu')):
+    def __init__(self, nb_in, nb_out, nb_emd, nb_heads, nb_hidden, nb_layers, dropout=0.1, device=torch.cuda.device('cuda:0' if torch.cuda.is_available else 'cpu')):
         super(TransformerModel, self).__init__()
         
         self.device = device
@@ -23,6 +23,7 @@ class TransformerModel(nn.Module):
 
         self.linear = nn.Linear(nb_emd, nb_out)
 
+    # TODO: Pad mask? (once prepare-data actually has a PAD token)
     def forward(self, src, tgt):
         if self.tgt_mask == None: 
             self.tgt_mask = self.transformer.generate_square_subsequent_mask(tgt.shape[1]).to(self.device)
@@ -30,13 +31,19 @@ class TransformerModel(nn.Module):
         src = self.emd_src(src) * torch.sqrt(torch.tensor(self.nb_in).float())
         tgt = self.emd_tgt(tgt) * torch.sqrt(torch.tensor(self.nb_out).float())
 
+        src_pad_mask = torch.zeros_like(src).type(torch.BoolTensor).to(self.device)
+        src_pad_mask[src == 0] = True
+
+        tgt_pad_mask = torch.zeros_like(tgt).type(torch.BoolTensor).to(self.device)
+        tgt_pad_mask[tgt == 0] = True
+
         src = self.pos_src(src)
         tgt = self.pos_tgt(tgt)
 
         src = src.permute(1, 0, 2)
         tgt = tgt.permute(1, 0, 2)
 
-        out = self.transformer(src, tgt, tgt_mask=self.tgt_mask)
+        out = self.transformer(src, tgt, tgt_mask=self.tgt_mask, src_key_padding=src_pad_mask, tgt_key_padding=tgt_pad_mask)
 
         out = out.permute(1, 0, 2)
         out = self.linear(out)
