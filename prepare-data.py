@@ -10,7 +10,7 @@ def floorN(num, divisor):
 
 def csv_to_list(path):
     f = open(path, mode='r')
-    seq = [SOS_INDEX]
+    seq = []
     
     lines = f.readlines()
     c_time = 0
@@ -106,6 +106,8 @@ if __name__ == '__main__':
     TIME_INDEX = OFF_INDEX + NB_NOTES
     VEL_INDEX = TIME_INDEX + NB_TIME
     
+    print(VEL_INDEX + NB_VEL)
+
     csv_files = glob.glob("./csv_out/*.csv")
 
     pb = tqdm(total=len(csv_files))

@@ -30,16 +30,17 @@ def train(model, dataloader):
 
     for ei in range(NB_EPOCHS):
         total_loss = 0.0
-        for i, (batch_in, batch_out) in enumerate(dataloader):
+        for i, (batch_src, batch_tgt, batch_out) in enumerate(dataloader):
 
             stime_batch = time.time()
 
-            batch_in = batch_in.type(torch.LongTensor).to(device)
+            batch_src = batch_src.type(torch.LongTensor).to(device)
+            batch_tgt = batch_tgt.type(torch.LongTensor).to(device)
             batch_out = batch_out.type(torch.LongTensor).to(device)
 
             optim.zero_grad()
-            out = model(batch_in)
-            out = out.transpose(1, 2)
+            out = model(batch_src, batch_tgt)
+            # out = out.transpose(1, 2)
 
             loss = crit(out, batch_out)
             total_loss += loss.item()
@@ -60,13 +61,13 @@ def train(model, dataloader):
 
         torch.save(model, f"models/{run_id}-{ei}-model.pt")
     torch.save(model, f"models/{run_id}-final-model.pt")
-    generate(model, f"{ei}-sample.csv", primer=test_primer)
+    # generate(model, f"{ei}-sample.csv", primer=test_primer)
 
 def generate(model, name, primer=None):
     model.eval()
     primer_length = 256
 
-    EOS_TOKEN = 334
+    EOS_TOKEN = 2
     MAX_LENGTH = 4000
 
     if primer == None:
@@ -99,10 +100,10 @@ if __name__ == '__main__':
 
     print("> Using Tensorflow Magenta MIDI Dataset\n")
     y = dataloader.MusicDataset("./np_out")
-    test_primer = y.__getitem__(0)[0].type(torch.LongTensor).view(1, -1)
+    # test_primer = y.__getitem__(0)[0].type(torch.LongTensor).view(1, -1)
     dataloader = torch.utils.data.DataLoader(y, batch_size=64, shuffle=True, num_workers=8)
 
-    transformer = model.TransformerEncoderModel(335, 256, 8, 512, 6, device=device).to(device)
+    transformer = model.TransformerModel(336, 336, 256, 8, 512, 6, device=device).to(device)
     print("> Model Summary:")
     print(transformer, '\n')
 

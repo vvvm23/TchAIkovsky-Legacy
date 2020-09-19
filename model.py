@@ -23,7 +23,6 @@ class TransformerModel(nn.Module):
 
         self.linear = nn.Linear(nb_emd, nb_out)
 
-    # TODO: Pad mask? (once prepare-data actually has a PAD token)
     def forward(self, src, tgt):
         if self.tgt_mask == None: 
             self.tgt_mask = self.transformer.generate_square_subsequent_mask(tgt.shape[1]).to(self.device)
@@ -43,7 +42,7 @@ class TransformerModel(nn.Module):
         src = src.permute(1, 0, 2)
         tgt = tgt.permute(1, 0, 2)
 
-        out = self.transformer(src, tgt, tgt_mask=self.tgt_mask, src_key_padding=src_pad_mask, tgt_key_padding=tgt_pad_mask)
+        out = self.transformer(src, tgt, tgt_mask=self.tgt_mask, src_key_padding_mask=src_pad_mask, tgt_key_padding_mask=tgt_pad_mask)
 
         out = out.permute(1, 0, 2)
         out = self.linear(out)
