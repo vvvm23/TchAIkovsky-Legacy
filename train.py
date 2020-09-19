@@ -23,7 +23,7 @@ def train(model, dataloader):
     nb_batches = len(dataloader) 
 
     crit = nn.CrossEntropyLoss()
-    optim = torch.optim.Adam(model.parameters(), lr=0.001)
+    optim = torch.optim.Adam(model.parameters(), lr=0.0001)
     # scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=50, gamma=0.1)
 
     model.train()
@@ -40,7 +40,9 @@ def train(model, dataloader):
 
             optim.zero_grad()
             out = model(batch_src, batch_tgt)
-            # out = out.transpose(1, 2)
+
+            out = out.reshape(-1, 336)
+            batch_out = batch_out.reshape(-1)
 
             loss = crit(out, batch_out)
             total_loss += loss.item()
