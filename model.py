@@ -27,14 +27,14 @@ class TransformerModel(nn.Module):
         if self.tgt_mask == None: 
             self.tgt_mask = self.transformer.generate_square_subsequent_mask(tgt.shape[1]).to(self.device)
 
-        src = self.emd_src(src) * torch.sqrt(torch.tensor(self.nb_in).float())
-        tgt = self.emd_tgt(tgt) * torch.sqrt(torch.tensor(self.nb_out).float())
-
         src_pad_mask = torch.zeros_like(src).type(torch.BoolTensor).to(self.device)
         src_pad_mask[src == 0] = True
 
         tgt_pad_mask = torch.zeros_like(tgt).type(torch.BoolTensor).to(self.device)
         tgt_pad_mask[tgt == 0] = True
+
+        src = self.emd_src(src) * torch.sqrt(torch.tensor(self.nb_in).float())
+        tgt = self.emd_tgt(tgt) * torch.sqrt(torch.tensor(self.nb_out).float())
 
         src = self.pos_src(src)
         tgt = self.pos_tgt(tgt)

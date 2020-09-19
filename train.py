@@ -63,36 +63,36 @@ def train(model, dataloader):
     torch.save(model, f"models/{run_id}-final-model.pt")
     # generate(model, f"{ei}-sample.csv", primer=test_primer)
 
-def generate(model, name, primer=None):
-    model.eval()
-    primer_length = 256
+# def generate(model, name, primer=None):
+    # model.eval()
+    # primer_length = 256
 
-    EOS_TOKEN = 2
-    MAX_LENGTH = 4000
+    # EOS_TOKEN = 2
+    # MAX_LENGTH = 4000
 
-    if primer == None:
-        primer = torch.tensor([random.randint(0, 332) for _ in range(primer_length)]).to(device)
-        primer = primer.view(1, -1)
+    # if primer == None:
+        # primer = torch.tensor([random.randint(0, 332) for _ in range(primer_length)]).to(device)
+        # primer = primer.view(1, -1)
     
-    primer = primer.type(torch.LongTensor).to(device)
-    # sample = primer.reshape(primer_length).tolist()
-    sample = []
+    # primer = primer.type(torch.LongTensor).to(device)
+    # # sample = primer.reshape(primer_length).tolist()
+    # sample = []
 
-    print("> Generating Sample.")
-    while len(sample) < MAX_LENGTH:
-        print(f"> Sample Length: {len(sample)}")
-        out = model(primer)
-        out = torch.argmax(out, dim=-1)
-        sample = sample + out.reshape(primer_length).tolist()
+    # print("> Generating Sample.")
+    # while len(sample) < MAX_LENGTH:
+        # print(f"> Sample Length: {len(sample)}")
+        # out = model(primer)
+        # out = torch.argmax(out, dim=-1)
+        # sample = sample + out.reshape(primer_length).tolist()
 
-        if EOS_TOKEN in out.reshape(primer_length).tolist():
-            break
+        # if EOS_TOKEN in out.reshape(primer_length).tolist():
+            # break
 
-        primer = out
+        # primer = out
 
-    midigen.generate_from_seq(sample, f"samples/{name}")
+    # midigen.generate_from_seq(sample, f"samples/{name}")
 
-    model.train()
+    # model.train()
     
 if __name__ == '__main__':
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -101,7 +101,7 @@ if __name__ == '__main__':
     print("> Using Tensorflow Magenta MIDI Dataset\n")
     y = dataloader.MusicDataset("./np_out")
     # test_primer = y.__getitem__(0)[0].type(torch.LongTensor).view(1, -1)
-    dataloader = torch.utils.data.DataLoader(y, batch_size=64, shuffle=True, num_workers=8)
+    dataloader = torch.utils.data.DataLoader(y, batch_size=32, shuffle=True, num_workers=8)
 
     transformer = model.TransformerModel(336, 336, 256, 8, 512, 6, device=device).to(device)
     print("> Model Summary:")
