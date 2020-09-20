@@ -24,7 +24,7 @@ class FastDataset(torch.utils.data.Dataset):
 
         pb = tqdm(total=len(npy_files))
 
-        for path in npy_files:
+        for path in npy_files[:100]:
             full_seq = torch.from_numpy(np.load(path))
             full_seq_len = full_seq.shape[0]
 

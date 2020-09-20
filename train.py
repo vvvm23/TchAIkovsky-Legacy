@@ -58,7 +58,7 @@ def train(model, dataloader):
 
             etime_batch = time.time()
             
-            if i and not i % PRINT_INV:
+            if not i % PRINT_INV:
                 estimated_time = timedelta(seconds = math.floor((etime_batch - stime_batch) * (nb_batches - i)))
                 print(f"> Epoch {ei+1}/{NB_EPOCHS} - Batch {i+1}/{nb_batches}")
                 print(f"> Batch finished in {etime_batch - stime_batch:1.2f} seconds")
@@ -126,10 +126,11 @@ if __name__ == '__main__':
     print(f"> Device: {device} ({'CUDA is enabled' if TRY_CUDA and torch.cuda.is_available() else 'CUDA not available'}) \n")
 
     print("> Loading Tensorflow Magenta MIDI Dataset.")
-    y = dataloader.FastDataset("./np_out")
-    test_primer = y.__getitem__(0)[0].type(torch.LongTensor).view(1, -1)
-    dataloader = torch.utils.data.DataLoader(y, batch_size=64, shuffle=True, num_workers=8)
-    print("Done.\n")
+    dataset = dataloader.FastDataset("./np_out")
+    test_primer = dataset.__getitem__(0)[0].type(torch.LongTensor).view(1, -1)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=8)
+    print("> Done.")
+    print(f"> Loaded {dataset.length} MIDI sequences.")
 
     transformer = model.TransformerModel(336, 336, 256, 8, 512, 4, device=device).to(device)
     print("> Model Summary:")
