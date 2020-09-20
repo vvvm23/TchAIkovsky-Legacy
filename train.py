@@ -25,12 +25,14 @@ def train(model, dataloader):
     nb_batches = len(dataloader) 
 
     crit = nn.CrossEntropyLoss()
-    optim = torch.optim.Adam(model.parameters(), lr=0.0001)
+    optim = torch.optim.Adam(model.parameters(), lr=0.1)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim, factor=0.25, patience=2)
     # scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=50, gamma=0.1)
 
     model.train()
 
     for ei in range(NB_EPOCHS):
+        epoch_loss = 0.0
         total_loss = 0.0
         for i, (batch_src, batch_tgt, batch_out) in enumerate(dataloader):
 
@@ -48,6 +50,7 @@ def train(model, dataloader):
 
             loss = crit(out, batch_out)
             total_loss += loss.item()
+            epoch_loss += loss.item()
             loss.backward()
 
             optim.step()
@@ -55,13 +58,15 @@ def train(model, dataloader):
 
             etime_batch = time.time()
             
-            if not i % PRINT_INV:
+            if i and not i % PRINT_INV:
                 estimated_time = timedelta(seconds = math.floor((etime_batch - stime_batch) * (nb_batches - i)))
                 print(f"> Epoch {ei+1}/{NB_EPOCHS} - Batch {i+1}/{nb_batches}")
                 print(f"> Batch finished in {etime_batch - stime_batch:1.2f} seconds")
                 print(f"> Estimated time to end of epoch: {str(estimated_time)}")
                 print(f"> Loss: {total_loss / PRINT_INV}\n")
                 total_loss = 0.0
+
+        scheduler.step(epoch_loss / len(dataloader))
 
         if ei and not ei % GEN_INV:
             generate(model, f"{ei}-sample.csv", src=test_primer)
@@ -120,16 +125,18 @@ if __name__ == '__main__':
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     print(f"> Device: {device} ({'CUDA is enabled' if TRY_CUDA and torch.cuda.is_available() else 'CUDA not available'}) \n")
 
-    print("> Using Tensorflow Magenta MIDI Dataset\n")
-    y = dataloader.MusicDataset("./np_out")
+    print("> Loading Tensorflow Magenta MIDI Dataset.")
+    y = dataloader.FastDataset("./np_out")
     test_primer = y.__getitem__(0)[0].type(torch.LongTensor).view(1, -1)
-    dataloader = torch.utils.data.DataLoader(y, batch_size=32, shuffle=True, num_workers=8)
+    dataloader = torch.utils.data.DataLoader(y, batch_size=64, shuffle=True, num_workers=8)
+    print("Done.\n")
 
-    transformer = model.TransformerModel(336, 336, 256, 8, 512, 6, device=device).to(device)
+    transformer = model.TransformerModel(336, 336, 256, 8, 512, 4, device=device).to(device)
     print("> Model Summary:")
     print(transformer, '\n')
 
     if len(sys.argv) == 2:
+        print("> Loading existing model from file\n")
         transformer = torch.load(sys.argv[1])
     # generate(transformer, "load-test")
 
