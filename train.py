@@ -11,12 +11,14 @@ import model
 import dataloader
 import midigen
 
+import sys
 import math
 
 TRY_CUDA = True
 
 NB_EPOCHS = 1000
 PRINT_INV = 64
+GEN_INV = 10
 
 def train(model, dataloader):
     run_id = int(time.time())
@@ -61,40 +63,58 @@ def train(model, dataloader):
                 print(f"> Loss: {total_loss / PRINT_INV}\n")
                 total_loss = 0.0
 
+        if ei and not ei % GEN_INV:
+            generate(model, f"{ei}-sample.csv", src=test_primer)
         torch.save(model, f"models/{run_id}-{ei}-model.pt")
     torch.save(model, f"models/{run_id}-final-model.pt")
-    # generate(model, f"{ei}-sample.csv", primer=test_primer)
 
-# def generate(model, name, primer=None):
-    # model.eval()
-    # primer_length = 256
+def generate(model, name, src=None):
+    model.eval()
+    src_len = 256
 
-    # EOS_TOKEN = 2
-    # MAX_LENGTH = 4000
+    EOS_TOKEN = 2
+    MAX_LENGTH = 10000
 
-    # if primer == None:
-        # primer = torch.tensor([random.randint(0, 332) for _ in range(primer_length)]).to(device)
-        # primer = primer.view(1, -1)
+    if src == None:
+        src = torch.tensor([random.randint(3, 336) for _ in range(src_len)]).to(device)
+        src = src.view(1, -1)
     
-    # primer = primer.type(torch.LongTensor).to(device)
-    # # sample = primer.reshape(primer_length).tolist()
-    # sample = []
 
-    # print("> Generating Sample.")
-    # while len(sample) < MAX_LENGTH:
-        # print(f"> Sample Length: {len(sample)}")
-        # out = model(primer)
-        # out = torch.argmax(out, dim=-1)
-        # sample = sample + out.reshape(primer_length).tolist()
+    src = src.type(torch.LongTensor).to(device)
+    # sample = primer.reshape(primer_length).tolist()
+    sample = []
 
-        # if EOS_TOKEN in out.reshape(primer_length).tolist():
-            # break
+    print("> Generating Sample.")
+    while len(sample) < MAX_LENGTH:
+        print(f"> Sample Length: {len(sample)}")
+        tgt = torch.tensor([1] + [0]*(src_len - 1)).unsqueeze(0)
+        tgt = tgt.type(torch.LongTensor).to(device)
 
-        # primer = out
+        sub_sample = torch.zeros_like(src).to(device)
 
-    # midigen.generate_from_seq(sample, f"samples/{name}")
+        for i in range(src_len):
+            out = model(src, tgt)
+            argmax_out = torch.argmax(out[0, i, :], dim=-1)
 
-    # model.train()
+            sub_sample[0, i] = argmax_out
+            if not i == src_len - 1:
+                tgt[0, i+1] = argmax_out
+
+        sample = sample + sub_sample.reshape(src_len).tolist()
+
+        if EOS_TOKEN in sub_sample:
+            break
+
+        src = sub_sample
+
+    for i, e in enumerate(sample):
+        if e == EOS_TOKEN:
+            sample = sample[:i-1]
+            break
+
+    midigen.generate_from_seq(sample, f"samples/{name}")
+
+    model.train()
     
 if __name__ == '__main__':
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -102,15 +122,15 @@ if __name__ == '__main__':
 
     print("> Using Tensorflow Magenta MIDI Dataset\n")
     y = dataloader.MusicDataset("./np_out")
-    # test_primer = y.__getitem__(0)[0].type(torch.LongTensor).view(1, -1)
+    test_primer = y.__getitem__(0)[0].type(torch.LongTensor).view(1, -1)
     dataloader = torch.utils.data.DataLoader(y, batch_size=32, shuffle=True, num_workers=8)
 
     transformer = model.TransformerModel(336, 336, 256, 8, 512, 6, device=device).to(device)
     print("> Model Summary:")
     print(transformer, '\n')
 
-    # model = torch.load("models/1598893328-6-model.pt")
-    # generate(model, "load-test")
+    if len(sys.argv) == 2:
+        transformer = torch.load(sys.argv[1])
+    # generate(transformer, "load-test")
 
-    # transformer = torch.load("models/1598887967-model.pt")
     train(transformer, dataloader)

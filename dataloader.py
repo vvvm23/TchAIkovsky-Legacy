@@ -18,7 +18,8 @@ class MusicDataset(torch.utils.data.Dataset):
         self.index_lookup = {}
         sample_count = 0
 
-        for file_id, path in enumerate(npy_files[:1]):
+        for file_id, path in enumerate(npy_files[1:2]):
+        # for file_id, path in enumerate(npy_files):
             seq = np.load(path)
             seq_len = seq.shape[0]
 
