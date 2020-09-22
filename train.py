@@ -21,6 +21,7 @@ NB_EPOCHS = 1000
 PRINT_INV = 64
 GEN_INV = 10
 
+RANDOM_SEED = 42
 TRAIN_TEST_SPLIT = 0.1
 
 def train(model, train_dataloader, test_dataloader):
@@ -154,6 +155,11 @@ def generate(model, name, src=None):
     model.train()
     
 if __name__ == '__main__':
+    torch.manual_seed(RANDOM_SEED)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    np.random.seed(RANDOM_SEED)
+
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     print(f"> Device: {device} ({'CUDA is enabled' if TRY_CUDA and torch.cuda.is_available() else 'CUDA not available'}) \n")
 
