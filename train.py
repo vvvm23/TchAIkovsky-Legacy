@@ -13,6 +13,7 @@ import midigen
 
 import sys
 import math
+import numpy as np
 
 TRY_CUDA = True
 
@@ -20,9 +21,11 @@ NB_EPOCHS = 1000
 PRINT_INV = 64
 GEN_INV = 10
 
-def train(model, dataloader):
+TRAIN_TEST_SPLIT = 0.1
+
+def train(model, train_dataloader, test_dataloader):
     run_id = int(time.time())
-    nb_batches = len(dataloader) 
+    nb_batches = len(train_dataloader) 
 
     # crit = nn.CrossEntropyLoss()
     crit = nn.NLLLoss()
@@ -35,7 +38,7 @@ def train(model, dataloader):
     for ei in range(NB_EPOCHS):
         epoch_loss = 0.0
         total_loss = 0.0
-        for i, (batch_src, batch_tgt, batch_out) in enumerate(dataloader):
+        for i, (batch_src, batch_tgt, batch_out) in enumerate(train_dataloader):
 
             stime_batch = time.time()
 
@@ -74,8 +77,33 @@ def train(model, dataloader):
 
         if ei and not ei % GEN_INV:
             generate(model, f"{ei}-sample.csv", src=test_primer)
+
+        val_loss = evaluate(model, test_dataloader, optim, crit)
+        print(f"> Epoch {ei+1}/{NB_EPOCHS}")
+        print(f"> Validation Loss: {val_loss}\n")
+
         torch.save(model, f"models/{run_id}-{ei}-model.pt")
     torch.save(model, f"models/{run_id}-final-model.pt")
+
+def evaluate(model, dataloader, optim, crit):
+    total_loss = 0.0
+    model.eval()
+    for batch_src, batch_tgt, batch_out in dataloader:
+        batch_src = batch_src.type(torch.LongTensor).to(device)
+        batch_tgt = batch_tgt.type(torch.LongTensor).to(device)
+        batch_out = batch_out.type(torch.LongTensor).to(device)
+
+        optim.zero_grad()
+        out = model(batch_src, batch_tgt)
+
+        out = out.reshape(-1, 336)
+        batch_out = batch_out.reshape(-1)
+
+        loss = crit(out, batch_out)
+        total_loss += loss.item()
+
+    model.train()
+    return total_loss / len(dataloader)
 
 def generate(model, name, src=None):
     model.eval()
@@ -131,12 +159,22 @@ if __name__ == '__main__':
 
     print("> Loading Tensorflow Magenta MIDI Dataset.")
     dataset = dataloader.FastDataset("./np_out")
-    test_primer = dataset.__getitem__(0)[0].type(torch.LongTensor).view(1, -1)
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True, num_workers=8)
+
+    sample_indices = list(range(len(dataset)))
+    np.random.shuffle(sample_indices)
+    split_point = int(np.floor(TRAIN_TEST_SPLIT * dataset.__len__()))
+    test_indices, train_indices = sample_indices[:split_point], sample_indices[split_point:]
+
+    test_sampler = torch.utils.data.SubsetRandomSampler(test_indices)
+    train_sampler = torch.utils.data.SubsetRandomSampler(train_indices)
+
+    test_primer = dataset.__getitem__(test_indices[0])[0].type(torch.LongTensor).view(1, -1)
+    train_dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, num_workers=8, sampler=train_sampler)
+    test_dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, num_workers=8, sampler=test_sampler)
     print("> Done.")
     print(f"> Loaded {dataset.length} MIDI sequences.")
 
-    transformer = model.TransformerModel(336, 256, 8, 512, 4, dropout=0.2, device=device).to(device)
+    transformer = model.TransformerModel(336, 128, 8, 256, 4, dropout=0.2, device=device).to(device)
     print("> Model Summary:")
     print(transformer, '\n')
 
@@ -145,4 +183,4 @@ if __name__ == '__main__':
         transformer = torch.load(sys.argv[1])
     # generate(transformer, "load-test")
 
-    train(transformer, dataloader)
+    train(transformer, train_dataloader, test_dataloader)
