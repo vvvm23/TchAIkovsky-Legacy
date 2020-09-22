@@ -5,23 +5,20 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class TransformerModel(nn.Module):
-    def __init__(self, nb_in, nb_out, nb_emd, nb_heads, nb_hidden, nb_layers, dropout=0.1, device=torch.cuda.device('cuda:0' if torch.cuda.is_available else 'cpu')):
+    def __init__(self, nb_in, nb_emd, nb_heads, nb_hidden, nb_layers, dropout=0.1, device=torch.cuda.device('cuda:0' if torch.cuda.is_available else 'cpu')):
         super(TransformerModel, self).__init__()
         
         self.device = device
         self.nb_in = nb_in
-        self.nb_out = nb_out
         self.tgt_mask = None
 
-        self.emd_src = nn.Embedding(nb_in, nb_emd)
-        self.emd_tgt = nn.Embedding(nb_out, nb_emd)
+        self.emd = nn.Embedding(nb_in, nb_emd)
 
-        self.pos_src = PositionalEncoding(nb_emd, dropout=dropout)
-        self.pos_tgt = PositionalEncoding(nb_emd, dropout=dropout)
+        self.pos = PositionalEncoding(nb_emd, dropout=dropout)
 
         self.transformer = nn.Transformer(nb_emd, nb_heads, nb_layers, nb_layers, nb_hidden, dropout)
 
-        self.linear = nn.Linear(nb_emd, nb_out)
+        self.linear = nn.Linear(nb_emd, nb_in)
 
     def forward(self, src, tgt):
         if self.tgt_mask == None: 
@@ -33,17 +30,16 @@ class TransformerModel(nn.Module):
         tgt_pad_mask = torch.zeros_like(tgt).type(torch.BoolTensor).to(self.device)
         tgt_pad_mask[tgt == 0] = True
 
-        src = self.emd_src(src) * torch.sqrt(torch.tensor(self.nb_in).float())
-        tgt = self.emd_tgt(tgt) * torch.sqrt(torch.tensor(self.nb_out).float())
+        src = self.emd(src) * torch.sqrt(torch.tensor(self.nb_in).float())
+        tgt = self.emd(tgt) * torch.sqrt(torch.tensor(self.nb_in).float())
 
-        src = self.pos_src(src)
-        tgt = self.pos_tgt(tgt)
+        src = self.pos(src)
+        tgt = self.pos(tgt)
 
         src = src.permute(1, 0, 2)
         tgt = tgt.permute(1, 0, 2)
 
         out = self.transformer(src, tgt, tgt_mask=self.tgt_mask, src_key_padding_mask=src_pad_mask, tgt_key_padding_mask=tgt_pad_mask)
-
         out = out.permute(1, 0, 2)
         out = self.linear(out)
         out = F.log_softmax(out, dim=-1)
@@ -111,5 +107,5 @@ class PositionalEncoding(nn.Module):
 
 if __name__ == '__main__':
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    x = TransformerModel(200, 200, 512, 8, 1024, 6, device=device)
+    x = TransformerModel(200, 512, 8, 1024, 6, device=device)
     print(x)

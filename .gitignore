@@ -8,5 +8,6 @@ csvmidi
 *.midi
 *.wav
 *.mp3
+*.csv
 .vim/
 midicsv

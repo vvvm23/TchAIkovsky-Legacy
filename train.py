@@ -24,9 +24,10 @@ def train(model, dataloader):
     run_id = int(time.time())
     nb_batches = len(dataloader) 
 
-    crit = nn.CrossEntropyLoss()
-    optim = torch.optim.Adam(model.parameters(), lr=0.1)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim, factor=0.25, patience=2)
+    # crit = nn.CrossEntropyLoss()
+    crit = nn.NLLLoss()
+    optim = torch.optim.Adam(model.parameters(), lr=0.001)
+    # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim, factor=0.25, patience=2)
     # scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=50, gamma=0.1)
 
     model.train()
@@ -44,6 +45,9 @@ def train(model, dataloader):
 
             optim.zero_grad()
             out = model(batch_src, batch_tgt)
+
+            # print(batch_src[0], batch_tgt[0])
+            # print(batch_out[0], out[0])
 
             out = out.reshape(-1, 336)
             batch_out = batch_out.reshape(-1)
@@ -66,7 +70,7 @@ def train(model, dataloader):
                 print(f"> Loss: {total_loss / PRINT_INV}\n")
                 total_loss = 0.0
 
-        scheduler.step(epoch_loss / len(dataloader))
+        # scheduler.step(epoch_loss / len(dataloader))
 
         if ei and not ei % GEN_INV:
             generate(model, f"{ei}-sample.csv", src=test_primer)
@@ -132,7 +136,7 @@ if __name__ == '__main__':
     print("> Done.")
     print(f"> Loaded {dataset.length} MIDI sequences.")
 
-    transformer = model.TransformerModel(336, 336, 256, 8, 512, 4, device=device).to(device)
+    transformer = model.TransformerModel(336, 256, 8, 512, 4, dropout=0.2, device=device).to(device)
     print("> Model Summary:")
     print(transformer, '\n')
 
