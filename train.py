@@ -19,7 +19,7 @@ TRY_CUDA = True
 
 NB_EPOCHS = 1000
 PRINT_INV = 64
-GEN_INV = 10
+GEN_INV = 1
 
 RANDOM_SEED = 42
 TRAIN_TEST_SPLIT = 0.1
@@ -30,8 +30,8 @@ def train(model, train_dataloader, test_dataloader):
 
     # crit = nn.CrossEntropyLoss()
     crit = nn.NLLLoss()
-    optim = torch.optim.Adam(model.parameters(), lr=0.001)
-    # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim, factor=0.25, patience=2)
+    optim = torch.optim.Adam(model.parameters(), lr=0.01)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim, factor=0.25, patience=2)
     # scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=50, gamma=0.1)
 
     model.train()
@@ -74,12 +74,11 @@ def train(model, train_dataloader, test_dataloader):
                 print(f"> Loss: {total_loss / PRINT_INV}\n")
                 total_loss = 0.0
 
-        # scheduler.step(epoch_loss / len(dataloader))
-
         if ei and not ei % GEN_INV:
             generate(model, f"{ei}-sample.csv", src=test_primer)
 
         val_loss = evaluate(model, test_dataloader, optim, crit)
+        scheduler.step(val_loss)
         print(f"> Epoch {ei+1}/{NB_EPOCHS}")
         print(f"> Validation Loss: {val_loss}\n")
 
