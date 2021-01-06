@@ -19,7 +19,7 @@ TRY_CUDA = True
 
 NB_EPOCHS = 1000
 PRINT_INV = 64
-GEN_INV = 1
+GEN_INV = 10
 
 RANDOM_SEED = 42
 TRAIN_TEST_SPLIT = 0.1
@@ -28,10 +28,10 @@ def train(model, train_dataloader, test_dataloader):
     run_id = int(time.time())
     nb_batches = len(train_dataloader) 
 
-    # crit = nn.CrossEntropyLoss()
-    crit = nn.NLLLoss()
-    optim = torch.optim.Adam(model.parameters(), lr=0.01)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim, factor=0.25, patience=2)
+    crit = nn.CrossEntropyLoss()
+    # crit = nn.NLLLoss()
+    optim = torch.optim.Adam(model.parameters(), lr=0.0001)
+    # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim, factor=0.25, patience=2)
     # scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=50, gamma=0.1)
 
     model.train()
@@ -78,7 +78,7 @@ def train(model, train_dataloader, test_dataloader):
             generate(model, f"{ei}-sample.csv", src=test_primer)
 
         val_loss = evaluate(model, test_dataloader, optim, crit)
-        scheduler.step(val_loss)
+        # scheduler.step(val_loss)
         print(f"> Epoch {ei+1}/{NB_EPOCHS}")
         print(f"> Validation Loss: {val_loss}\n")
 
@@ -86,78 +86,82 @@ def train(model, train_dataloader, test_dataloader):
     torch.save(model, f"models/{run_id}-final-model.pt")
 
 def evaluate(model, dataloader, optim, crit):
-    total_loss = 0.0
-    model.eval()
-    for batch_src, batch_tgt, batch_out in dataloader:
-        batch_src = batch_src.type(torch.LongTensor).to(device)
-        batch_tgt = batch_tgt.type(torch.LongTensor).to(device)
-        batch_out = batch_out.type(torch.LongTensor).to(device)
+    with torch.no_grad():
+        total_loss = 0.0
+        model.eval()
+        for batch_src, batch_tgt, batch_out in dataloader:
+            batch_src = batch_src.type(torch.LongTensor).to(device)
+            batch_tgt = batch_tgt.type(torch.LongTensor).to(device)
+            batch_out = batch_out.type(torch.LongTensor).to(device)
 
-        optim.zero_grad()
-        out = model(batch_src, batch_tgt)
+            optim.zero_grad()
+            out = model(batch_src, batch_tgt)
 
-        out = out.reshape(-1, 336)
-        batch_out = batch_out.reshape(-1)
+            out = out.reshape(-1, 336)
+            batch_out = batch_out.reshape(-1)
 
-        loss = crit(out, batch_out)
-        total_loss += loss.item()
+            loss = crit(out, batch_out)
+            total_loss += loss.item()
 
-    model.train()
-    return total_loss / len(dataloader)
+        model.train()
+        return total_loss / len(dataloader)
 
 def generate(model, name, src=None):
-    model.eval()
-    src_len = 256
+    with torch.no_grad():
+        model.eval()
+        src_len = 1024
 
-    EOS_TOKEN = 2
-    MAX_LENGTH = 10000
+        EOS_TOKEN = 2
+        MAX_LENGTH = 500
+        TAU = 5.0
 
-    if src == None:
-        src = torch.tensor([random.randint(3, 336) for _ in range(src_len)]).to(device)
-        src = src.view(1, -1)
-    
+        # TODO: Random is no bueno, we need to train some examples with pad starts
+        if src == None:
+            # src = torch.tensor([random.randint(3, 336) for _ in range(src_len)]).to(device)
+            src = torch.zeros(1, src_len)
+            # src = src.view(1, -1)
 
-    src = src.type(torch.LongTensor).to(device)
-    # sample = primer.reshape(primer_length).tolist()
-    sample = []
+        src = src.type(torch.LongTensor).to(device)
+        # sample = primer.reshape(primer_length).tolist()
+        sample = []
 
-    print("> Generating Sample.")
-    while len(sample) < MAX_LENGTH:
-        print(f"> Sample Length: {len(sample)}")
-        tgt = torch.tensor([1] + [0]*(src_len - 1)).unsqueeze(0)
-        tgt = tgt.type(torch.LongTensor).to(device)
+        print("> Generating Sample.")
+        while len(sample) < MAX_LENGTH:
+            print(f"> Sample Length: {len(sample)}")
+            tgt = torch.tensor([1] + [0]*(src_len - 1)).unsqueeze(0)
+            tgt = tgt.type(torch.LongTensor).to(device)
 
-        sub_sample = torch.zeros_like(src).to(device)
+            sub_sample = torch.zeros_like(src).to(device)
 
-        for i in range(src_len):
-            out = model(src, tgt)
-            argmax_out = torch.argmax(out[0, i, :], dim=-1)
+            for i in range(src_len):
+                out = model(src, tgt)
+                out = torch.mulitnomial(torch.softmax(out / TAU, dim=-1), 1, dim=-1)
+                # argmax_out = torch.argmax(out[0, i, :], dim=-1)
 
-            sub_sample[0, i] = argmax_out
-            if not i == src_len - 1:
-                tgt[0, i+1] = argmax_out
+                sub_sample[0, i] = argmax_out
+                if not i == src_len - 1:
+                    tgt[0, i+1] = argmax_out
 
-        sample = sample + sub_sample.reshape(src_len).tolist()
+            sample = sample + sub_sample.reshape(src_len).tolist()
 
-        if EOS_TOKEN in sub_sample:
-            break
+            if EOS_TOKEN in sub_sample:
+                break
 
-        src = sub_sample
+            src = sub_sample
 
-    for i, e in enumerate(sample):
-        if e == EOS_TOKEN:
-            sample = sample[:i-1]
-            break
+        for i, e in enumerate(sample):
+            if e == EOS_TOKEN:
+                sample = sample[:i-1]
+                break
 
-    midigen.generate_from_seq(sample, f"samples/{name}")
-
-    model.train()
+        midigen.generate_from_seq(sample, f"samples/{name}")
+        model.train()
     
 if __name__ == '__main__':
-    torch.manual_seed(RANDOM_SEED)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-    np.random.seed(RANDOM_SEED)
+    # torch.manual_seed(RANDOM_SEED)
+    # torch.backends.cudnn.deterministic = True
+    # torch.backends.cudnn.benchmark = False
+    # np.random.seed(RANDOM_SEED)
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     print(f"> Device: {device} ({'CUDA is enabled' if TRY_CUDA and torch.cuda.is_available() else 'CUDA not available'}) \n")
@@ -174,12 +178,12 @@ if __name__ == '__main__':
     train_sampler = torch.utils.data.SubsetRandomSampler(train_indices)
 
     test_primer = dataset.__getitem__(test_indices[0])[0].type(torch.LongTensor).view(1, -1)
-    train_dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, num_workers=8, sampler=train_sampler)
-    test_dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, num_workers=8, sampler=test_sampler)
+    train_dataloader = torch.utils.data.DataLoader(dataset, batch_size=16, num_workers=8, sampler=train_sampler)
+    test_dataloader = torch.utils.data.DataLoader(dataset, batch_size=16, num_workers=8, sampler=test_sampler)
     print("> Done.")
     print(f"> Loaded {dataset.length} MIDI sequences.")
 
-    transformer = model.TransformerModel(336, 128, 8, 256, 4, dropout=0.2, device=device).to(device)
+    transformer = model.TransformerModel(336, 128, 8, 256, 8, dropout=0.0, device=device).to(device)
     print("> Model Summary:")
     print(transformer, '\n')
 
