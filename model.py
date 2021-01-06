@@ -13,12 +13,17 @@ class TransformerModel(nn.Module):
         self.tgt_mask = None
 
         self.emd = nn.Embedding(nb_in, nb_emd)
+        torch.nn.init.kaiming_normal_(self.emd.weight)
 
         self.pos = PositionalEncoding(nb_emd, dropout=dropout)
 
         self.transformer = nn.Transformer(nb_emd, nb_heads, nb_layers, nb_layers, nb_hidden, dropout)
+        for p in self.transformer.parameters():
+            torch.nn.init.kaiming_normal_(p.data)
+            break
 
         self.linear = nn.Linear(nb_emd, nb_in)
+        torch.nn.init.kaiming_normal_(self.linear.weight)
 
     def forward(self, src, tgt):
         if self.tgt_mask == None: 
@@ -42,7 +47,7 @@ class TransformerModel(nn.Module):
         out = self.transformer(src, tgt, tgt_mask=self.tgt_mask, src_key_padding_mask=src_pad_mask, tgt_key_padding_mask=tgt_pad_mask)
         out = out.permute(1, 0, 2)
         out = self.linear(out)
-        out = F.log_softmax(out, dim=-1)
+        # out = F.log_softmax(out, dim=-1)
         return out
 
 class TransformerEncoderModel(nn.Module):
