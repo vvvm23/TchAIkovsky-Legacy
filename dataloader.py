@@ -5,8 +5,9 @@ import glob
 from tqdm import tqdm
 
 INTERVAL = 128
-SAMPLE_LENGTH = 256
-INITIAL_ALLOC = 300_000
+# SAMPLE_LENGTH = 256
+SAMPLE_LENGTH = 16
+INITIAL_ALLOC = 400_000
 
 class FastDataset(torch.utils.data.Dataset):
     def __init__(self, root_dir):
@@ -32,7 +33,12 @@ class FastDataset(torch.utils.data.Dataset):
             locs = range(0, full_seq_len - SAMPLE_LENGTH - 1, INTERVAL)
 
             for l in locs:
-                seq = full_seq[l:l+SAMPLE_LENGTH*2]
+                start_id = l - SAMPLE_LENGTH + 1
+                end_id = l+SAMPLE_LENGTH+1
+                if start_id < 0:
+                    seq = torch.cat([torch.zeros(-start_id), full_seq[0:end_id]])
+                else:
+                    seq = full_seq[start_id:end_id]
 
                 src = torch.zeros(SAMPLE_LENGTH).type(torch.LongTensor)
                 tgt = torch.zeros(SAMPLE_LENGTH).type(torch.LongTensor)
@@ -40,32 +46,43 @@ class FastDataset(torch.utils.data.Dataset):
 
                 src = seq[:SAMPLE_LENGTH]
                 
+                # print(seq.shape)
                 pad_len = 2*SAMPLE_LENGTH - seq.shape[0]
 
                 if pad_len > 0:
                     out[:SAMPLE_LENGTH - pad_len] = seq[SAMPLE_LENGTH:SAMPLE_LENGTH*2]
-                    out[SAMPLE_LENGTH - pad_len:] = torch.tensor([0]*pad_len)
+                    # out[SAMPLE_LENGTH - pad_len:] = torch.tensor([0]*pad_len)
+                    out[SAMPLE_LENGTH - pad_len:] = torch.zeros(pad_len)
 
-                    tgt[0] = torch.tensor(1)
+                    # tgt[0] = torch.tensor(1)
+                    tgt[0] = 1
                     tgt[1:SAMPLE_LENGTH - pad_len] = seq[SAMPLE_LENGTH:-1]
-                    tgt[SAMPLE_LENGTH - pad_len:] = torch.tensor([0]*(pad_len))
+                    # tgt[SAMPLE_LENGTH - pad_len:] = torch.tensor([0]*(pad_len))
+                    tgt[SAMPLE_LENGTH - pad_len:] = torch.zeros(pad_len)
                 else:
                     out = seq[SAMPLE_LENGTH:SAMPLE_LENGTH*2]
 
-                    tgt[0] = torch.tensor(1)
+                    # tgt[0] = torch.tensor(1)
+                    tgt[0] = 1
                     tgt[1:] = seq[SAMPLE_LENGTH:SAMPLE_LENGTH*2 - 1]
 
-                self.src[self.length, :] = src
-                self.tgt[self.length, :] = tgt
-                self.out[self.length, :] = out
+                self.src[self.length] = src
+                self.tgt[self.length] = tgt
+                self.out[self.length] = out
+
+                # print(seq)
+                # print(src)
+                # print(tgt)
+                # print(out)
+                # exit()
 
                 self.length += 1
 
             pb.update(1)
         
-        self.src = self.src[:self.length, :]
-        self.tgt = self.tgt[:self.length, :]
-        self.out = self.out[:self.length, :]
+        self.src = self.src[:self.length]
+        self.tgt = self.tgt[:self.length]
+        self.out = self.out[:self.length]
 
     def __len__(self):
         return self.length
